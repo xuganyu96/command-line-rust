@@ -3,10 +3,6 @@ name = "command-line-rust"
 version = "0.1.0"
 edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
-[dependencies]
-
 [[bin]]
 name = "true"
 path = "src/bin/true.rs"
@@ -19,5 +15,12 @@ path = "src/bin/false.rs"
 name = "hello"
 path = "src/bin/hello.rs"
 
+[[bin]]
+name = "echo"
+path = "src/bin/echo.rs"
+
 [dev-dependencies]
 assert_cmd = "2.0.7"
+
+[dependencies]
+clap = { version = "4.0.32", features = ["derive"] }
