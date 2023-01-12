@@ -19,6 +19,10 @@ path = "src/bin/hello.rs"
 name = "echo"
 path = "src/bin/echo.rs"
 
+[[bin]]
+name = "cat"
+path = "src/bin/cat.rs"
+
 [dev-dependencies]
 assert_cmd = "2.0.7"
 predicates = "2.1.5"
