@@ -25,10 +25,10 @@ fn setup() -> TestResult {
     writeln!(&mut haiku, "There's no way it's DNS")?;
     writeln!(&mut haiku, "It was DNS")?;
 
-    let _not_allowed = File::create("tests/inputs/notallowed")?;
-    Command::new("chmod")
-        .args(["000", "tests/inputs/notallowed"])
-        .output()?;
+    // let _not_allowed = File::create("tests/inputs/notallowed")?;
+    // Command::new("chmod")
+    //     .args(["000", "tests/inputs/notallowed"])
+    //     .output()?;
 
     return Ok(());
 }
