@@ -2,6 +2,10 @@
 //! There are some problems, namely with setup and teardown, especially
 //! without a testing framework. Here is a blog about how to do it:
 //! https://medium.com/@ericdreichert/test-setup-and-teardown-in-rust-without-a-framework-ba32d97aa5ab
+//!
+//! For now, a work around of using a struct that implements Drop was
+//! implemented. To prevent data race, run with:
+//! cargo test -- --test-threads 1
 use std::error::Error;
 use std::fs::{ self, File };
 use std::io::Write;
@@ -9,41 +13,46 @@ use assert_cmd::Command;
 
 type TestResult = Result<(), Box<dyn Error>>;
 
-/// Write some dummy files to a some temporary location. Call chmod on one of
-/// them to make it inaccessible. Cargo test must be run at project root to
-/// ensure the correct pathing
-fn setup() -> TestResult {
-    fs::create_dir_all("tests/inputs")?;
-    let mut foobar = File::create("tests/inputs/foobar")?;
-    writeln!(&mut foobar, "foobar")?;
+struct Setup;
 
-    let _empty = File::create("tests/inputs/empty")?;
+impl Setup {
+    /// Write some dummy files to a some temporary location. Call chmod on one of
+    /// them to make it inaccessible. Cargo test must be run at project root to
+    /// ensure the correct pathing
+    fn run() -> TestResult {
+        fs::create_dir_all("tests/inputs")?;
+        let mut foobar = File::create("tests/inputs/foobar")?;
+        writeln!(&mut foobar, "foobar")?;
 
-    let mut haiku = File::create("tests/inputs/haiku")?;
-    writeln!(&mut haiku, "It's not DNS")?;
-    writeln!(&mut haiku, "There's no way it's DNS")?;
-    writeln!(&mut haiku, "It was DNS")?;
+        let _empty = File::create("tests/inputs/empty")?;
 
-    let _not_allowed = File::create("tests/inputs/notallowed")?;
-    Command::new("chmod")
-        .args(["000", "tests/inputs/notallowed"])
-        .output()?;
+        let mut haiku = File::create("tests/inputs/haiku")?;
+        writeln!(&mut haiku, "It's not DNS")?;
+        writeln!(&mut haiku, "There's no way it's DNS")?;
+        writeln!(&mut haiku, "It was DNS")?;
 
-    return Ok(());
+        let _not_allowed = File::create("tests/inputs/notallowed")?;
+        Command::new("chmod")
+            .args(["000", "tests/inputs/notallowed"])
+            .output()?;
+
+        return Ok(());
+    }
 }
 
-fn cleanup() -> TestResult {
-    // fs::remove_dir_all("tests/inputs")?;
-    return Ok(());
+impl Drop for Setup {
+    fn drop(&mut self) {
+        let _ = fs::remove_dir_all("tests/inputs");
+    }
 }
+
 
 fn test(args: &[&str], stdin: &'static str, stdout_pred: &'static str, stderr_pred: &'static str, success: bool) -> TestResult {
-    setup()?;
+    let _ = Setup::run();
     let mut assertion = Command::cargo_bin("cat")?
         .args(args)
         .write_stdin(stdin)
         .assert();
-    cleanup()?;
     
     assertion = match success {
         true => assertion.success(),
@@ -122,23 +131,12 @@ fn cat_inaccessible_files() -> TestResult {
         false
     )?;
     
-    // TODO: I couldn't quite get this to work.
-    //   When the input file is inaccessible, the assert_cmd::Command will
-    //   panic at ".assert()" instead of executing into a failure and
-    //   capturing stdout and stderr
-    // test(
-    //     &["tests/inputs/notallowed"],
-    //     "",
-    //     "",
-    //     "cat: tests/inputs/notallowed: Permission denied\n",
-    //     false
-    // )?;
-    Command::cargo_bin("cat")?
-        .args(["tests/inputs/notallowed"])
-        .write_stdin("")
-        .assert()
-        .failure()
-        .try_stdout("")?
-        .try_stderr("cat: tests/inputs/notallowed: Permission denied (os error 13)\n")?;
+    test(
+        &["tests/inputs/notallowed"],
+        "",
+        "",
+        "cat: tests/inputs/notallowed: Permission denied (os error 13)\n",
+        false
+    )?;
     return Ok(());
 }
