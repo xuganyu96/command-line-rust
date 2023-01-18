@@ -28,8 +28,17 @@ pub fn open(source: &str) -> Result<Box<dyn BufRead>, Box<dyn Error>> {
     match source {
         "-" => return Ok(Box::new(BufReader::new(io::stdin()))),
         _ => {
-            let file_handle = File::open(source)?;
-            return Ok(Box::new(BufReader::new(file_handle)));
+            let handle = File::open(source);
+            return match handle {
+                Ok(file_handle) => {
+                    Ok(Box::new(BufReader::new(file_handle)))
+                },
+                Err(e) => {
+                    let errmsg = e.to_string();
+                    let errmsg = format!("cat: {source}: {errmsg}");
+                    Err(Box::new(io::Error::new(e.kind(), errmsg)))
+                }
+            };
         },
     }
 }
@@ -48,7 +57,7 @@ pub fn write<T: BufRead>(
     while let Ok(linelen) = reader.read_line(&mut line) {
         if linelen == 0 { break; }
         if (nonblank_lines && line != "\n") || all_lines {
-            let expanded_line = format!("{:>6}  {}", line_no + 1, line);
+            let expanded_line = format!("{:>6}\t{}", line_no + 1, line);
             buf.push_str(&expanded_line);
             line.clear();
             line_no += 1;

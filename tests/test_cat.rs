@@ -5,8 +5,7 @@
 use std::error::Error;
 use std::fs::{ self, File };
 use std::io::Write;
-use std::process::Command;
-use assert_cmd::Command as AssertCommand;
+use assert_cmd::Command;
 
 type TestResult = Result<(), Box<dyn Error>>;
 
@@ -25,10 +24,10 @@ fn setup() -> TestResult {
     writeln!(&mut haiku, "There's no way it's DNS")?;
     writeln!(&mut haiku, "It was DNS")?;
 
-    // let _not_allowed = File::create("tests/inputs/notallowed")?;
-    // Command::new("chmod")
-    //     .args(["000", "tests/inputs/notallowed"])
-    //     .output()?;
+    let _not_allowed = File::create("tests/inputs/notallowed")?;
+    Command::new("chmod")
+        .args(["000", "tests/inputs/notallowed"])
+        .output()?;
 
     return Ok(());
 }
@@ -40,8 +39,7 @@ fn cleanup() -> TestResult {
 
 fn test(args: &[&str], stdin: &'static str, stdout_pred: &'static str, stderr_pred: &'static str, success: bool) -> TestResult {
     setup()?;
-    // let mut assertion = AssertCommand::cargo_bin("cat")?
-    let mut assertion = AssertCommand::new("cat")
+    let mut assertion = Command::cargo_bin("cat")?
         .args(args)
         .write_stdin(stdin)
         .assert();
@@ -120,7 +118,7 @@ fn cat_inaccessible_files() -> TestResult {
         &["does-not-exist"],
         "",
         "",
-        "cat: does-not-exist: No such file or directory\n",
+        "cat: does-not-exist: No such file or directory (os error 2)\n",
         false
     )?;
     
@@ -135,5 +133,12 @@ fn cat_inaccessible_files() -> TestResult {
     //     "cat: tests/inputs/notallowed: Permission denied\n",
     //     false
     // )?;
+    use std::process::Command;
+    let output = Command::new("./target/debug/cat")
+        .args(["tests/inputs/notallowed"])
+        .output()
+        .expect("test process failed to execute");
+    assert_eq!(String::from_utf8(output.stdout).unwrap(), "");
+    assert_eq!(String::from_utf8(output.stderr).unwrap(), "cat: tests/inputs/notallowed: Permission denied (os error 13)\n");
     return Ok(());
 }

@@ -5,7 +5,7 @@ use command_line_rust::libcat::{ self, Args };
 
 fn main() {
     if let Err(e) = libcat::main(Args::parse()) {
-        println!("{e}");
+        eprintln!("{e}");
         exit(1);
     }
 }
