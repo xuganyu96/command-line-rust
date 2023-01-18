@@ -133,12 +133,12 @@ fn cat_inaccessible_files() -> TestResult {
     //     "cat: tests/inputs/notallowed: Permission denied\n",
     //     false
     // )?;
-    use std::process::Command;
-    let output = Command::new("./target/debug/cat")
+    Command::cargo_bin("cat")?
         .args(["tests/inputs/notallowed"])
-        .output()
-        .expect("test process failed to execute");
-    assert_eq!(String::from_utf8(output.stdout).unwrap(), "");
-    assert_eq!(String::from_utf8(output.stderr).unwrap(), "cat: tests/inputs/notallowed: Permission denied (os error 13)\n");
+        .write_stdin("")
+        .assert()
+        .failure()
+        .try_stdout("")?
+        .try_stderr("cat: tests/inputs/notallowed: Permission denied (os error 13)\n")?;
     return Ok(());
 }
