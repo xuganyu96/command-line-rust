@@ -2,6 +2,7 @@
 name = "command-line-rust"
 version = "0.1.0"
 edition = "2021"
+authors = ["Ganyu Xu <xuganyu@berkeley.edu>"]
 
 [[bin]]
 name = "true"

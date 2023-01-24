@@ -102,7 +102,6 @@ fn test_cargo_bin(
         .args(args)
         .write_stdin(stdin)
         .assert();
-
     if success {
         assertion = assertion.try_success()?;
     } else {
