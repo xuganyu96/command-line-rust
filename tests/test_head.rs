@@ -177,7 +177,7 @@ fn does_not_exist() -> TestResult {
         "",
         false,
         "",
-        "head: does-not-exist: No such file or directory\n"
+        "head: does-not-exist: No such file or directory (os error 2)\n"
     );
 }
 
@@ -190,6 +190,6 @@ fn permission_denied() -> TestResult {
         "",
         false,
         "",
-        "head: tests/inputs/notallowed: Permission denied\n"
+        "head: tests/inputs/notallowed: Permission denied (os error 13)\n"
     );
 }

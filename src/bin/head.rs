@@ -5,7 +5,7 @@ use command_line_rust::libhead::run;
 
 fn main() {
     if let Err(e) = run() {
-        eprintln!("{e}");
+        eprintln!("head: {e}");
         exit(1);
     }
     exit(0);

@@ -64,9 +64,13 @@ fn open(path: &str) -> MyResult<Box<dyn BufRead>> {
     return match path {
         "" => Ok(Box::new(BufReader::new(io::stdin()))),
         _ => {
-            // TODO: need to modify the error msg to include bin and path
-            let handle = File::open(path)?;
-            Ok(Box::new(BufReader::new(handle)))
+            match File::open(path) {
+                Ok(handle) => Ok(Box::new(BufReader::new(handle))),
+                Err(e) => {
+                    let msg = format!("{path}: {}", e.to_string());
+                    Err(Box::new(io::Error::new(e.kind(), msg)))
+                },
+            }
         }
     }
 }
