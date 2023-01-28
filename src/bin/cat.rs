@@ -1,11 +1,10 @@
 //! cat - concatenate and print files
 use std::process::exit;
-use clap::Parser;  // needed for Args to be recognized
-use command_line_rust::libcat::{ self, Args };
+use command_line_rust::libcat;
 
 fn main() {
-    if let Err(e) = libcat::main(Args::parse()) {
-        eprintln!("{e}");
+    if let Err(e) = libcat::run() {
+        eprintln!("cat: {e}");
         exit(1);
     }
 }

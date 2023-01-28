@@ -35,7 +35,7 @@ pub fn open(source: &str) -> Result<Box<dyn BufRead>, Box<dyn Error>> {
                 },
                 Err(e) => {
                     let errmsg = e.to_string();
-                    let errmsg = format!("cat: {source}: {errmsg}");
+                    let errmsg = format!("{source}: {errmsg}");
                     Err(Box::new(io::Error::new(e.kind(), errmsg)))
                 }
             };
@@ -71,7 +71,8 @@ pub fn write<T: BufRead>(
     return Ok(buflen);
 }
 
-pub fn main(args: Args) -> Result<(), Box<dyn Error>> {
+pub fn run() -> Result<(), Box<dyn Error>> {
+    let args = Args::try_parse()?;
     let mut buf = String::new();
     for source in args.files.iter() {
         let mut handle = open(source)?;
