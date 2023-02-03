@@ -130,7 +130,9 @@ impl WordCountInfo {
         if count_chars {
             output.push_str(&char_str);
         }
-        output.push_str(&path);
+        if path.len() > 0 {
+            output.push_str(&path);
+        }
         
         return output;
     }
