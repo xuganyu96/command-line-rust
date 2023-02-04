@@ -163,7 +163,8 @@ fn open(path: &str) -> MyResult<Box<dyn BufRead>> {
 }
 
 /// Parse the arguments, count the words, then print to output
-pub fn run() -> MyResult<()> {
+pub fn run() -> MyResult<i32> {
+    let mut exitcode = 0;
     let mut args = Arg::try_parse()?;
     let (count_lines, count_words, count_bytes, count_chars) =
         match (args.lines, args.words, args.bytes, args.chars) {
@@ -188,6 +189,7 @@ pub fn run() -> MyResult<()> {
             }
             Err(e) => {
                 eprintln!("wc: {}", e.to_string());
+                exitcode = 1;
             }
         }
     }
@@ -197,7 +199,7 @@ pub fn run() -> MyResult<()> {
         println!("{line}");
     }
 
-    return Ok(());
+    return Ok(exitcode);
 }
 
 #[cfg(test)]
