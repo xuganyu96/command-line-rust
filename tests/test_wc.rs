@@ -1,7 +1,7 @@
 //! Tests for the wc program:
-use std::fs::{ self, File };
-use std::io::Write;
 use assert_cmd::Command;
+use std::fs::{self, File};
+use std::io::Write;
 mod common;
 
 /// Test data: empty file, non-empty file, files with non-ASCII
@@ -12,10 +12,13 @@ fn create_test_data() -> common::TestResult {
     let mut haiku = File::create("tests/inputs/haiku")?;
     let mut nonascii = File::create("tests/inputs/nonascii")?;
     let _ = File::create("tests/inputs/notallowed")?;
-    
-    writeln!(&mut haiku, "It's not DNS
+
+    writeln!(
+        &mut haiku,
+        "It's not DNS
 There's no way it's DNS
-It was DNS")?;
+It was DNS"
+    )?;
     writeln!(&mut nonascii, "锟斤拷\n锘锘锘\n烫烫烫\n屯屯屯")?;
 
     Command::new("chmod")
@@ -41,10 +44,10 @@ fn count_stdin() -> common::TestResult {
         &[],
         "Hello, world!\n",
         true,
-        "       1       2      14 \n",  // WHY?
+        "       1       2      14 \n", // WHY?
         "",
     )?;
-    
+
     common::test_cargo_bin(
         Box::new(create_test_data),
         Box::new(cleanup_test_data),
@@ -134,4 +137,3 @@ fn count_permission_denied() -> common::TestResult {
         "wc: Permission denied (os error 13)\n",
     );
 }
-

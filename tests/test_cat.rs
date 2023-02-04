@@ -1,6 +1,6 @@
-use std::fs::{ self, File };
-use std::io::Write;
 use assert_cmd::Command;
+use std::fs::{self, File};
+use std::io::Write;
 mod common;
 
 fn create_test_data() -> common::TestResult {
@@ -38,7 +38,7 @@ fn cat_regular_files() -> common::TestResult {
         "",
         true,
         "foobar\nfoobar\n",
-        ""
+        "",
     );
 }
 

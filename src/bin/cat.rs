@@ -1,6 +1,6 @@
 //! cat - concatenate and print files
-use std::process::exit;
 use command_line_rust::libcat;
+use std::process::exit;
 
 fn main() {
     if let Err(e) = libcat::run() {

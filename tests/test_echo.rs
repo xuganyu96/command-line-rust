@@ -1,17 +1,15 @@
 //! Integration tests for "echo"
-use std::error::Error;
 use assert_cmd::Command;
 use predicates;
+use std::error::Error;
 
 type TestResult = Result<(), Box<dyn Error>>;
 
 #[test]
 fn echo_empty_input() -> TestResult {
     let mut cmd = Command::cargo_bin("echo")?;
-    cmd.assert()
-        .stdout("\n")
-        .stderr("");
-    
+    cmd.assert().stdout("\n").stderr("");
+
     return Ok(());
 }
 

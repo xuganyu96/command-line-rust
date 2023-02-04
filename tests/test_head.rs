@@ -1,7 +1,7 @@
 //! Test head:
-use std::fs::{ self, File };
-use std::io::Write;
 use assert_cmd::Command;
+use std::fs::{self, File};
+use std::io::Write;
 mod common;
 
 fn create_test_data() -> common::TestResult {
@@ -76,7 +76,12 @@ fn multiple_files() -> common::TestResult {
         Box::new(create_test_data),
         Box::new(cleanup_test_data),
         "head",
-        &["-n", "1", "tests/inputs/manylines", "tests/inputs/manylines"],
+        &[
+            "-n",
+            "1",
+            "tests/inputs/manylines",
+            "tests/inputs/manylines",
+        ],
         "",
         true,
         "==> tests/inputs/manylines <==
@@ -101,7 +106,7 @@ fn does_not_exist() -> common::TestResult {
         "",
         false,
         "",
-        "head: does-not-exist: No such file or directory (os error 2)\n"
+        "head: does-not-exist: No such file or directory (os error 2)\n",
     );
 }
 
@@ -117,6 +122,6 @@ fn permission_denied() -> common::TestResult {
         "",
         false,
         "",
-        "head: tests/inputs/notallowed: Permission denied (os error 13)\n"
+        "head: tests/inputs/notallowed: Permission denied (os error 13)\n",
     );
 }

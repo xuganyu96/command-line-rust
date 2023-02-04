@@ -1,8 +1,8 @@
 //! Structs and functions commonly used by integration tests
-use std::error::Error;
-use assert_cmd::Command;
 use assert_cmd::assert::IntoOutputPredicate;
+use assert_cmd::Command;
 use predicates::Predicate;
+use std::error::Error;
 
 pub type TestResult = Result<(), Box<dyn Error>>;
 
@@ -17,9 +17,10 @@ pub fn test_cargo_bin<I, P>(
     success: bool,
     stdout_pred: I,
     stderr_pred: I,
-) -> TestResult 
-where I: IntoOutputPredicate<P>,
-      P: Predicate<[u8]>,
+) -> TestResult
+where
+    I: IntoOutputPredicate<P>,
+    P: Predicate<[u8]>,
 {
     setup()?;
     let mut assertion = Command::cargo_bin(bin)?
@@ -34,7 +35,7 @@ where I: IntoOutputPredicate<P>,
 
     assertion = assertion.try_stdout(stdout_pred)?;
     _ = assertion.try_stderr(stderr_pred)?;
-    
+
     cleanup();
     return Ok(());
 }
