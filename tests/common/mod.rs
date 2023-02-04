@@ -8,7 +8,7 @@ pub type TestResult = Result<(), Box<dyn Error>>;
 
 /// Execute the input cargo binary once using the specified inputs and compare
 /// with the specified outputs
-pub fn test_cargo_bin<I, P>(
+pub fn test_cargo_bin<I, J, P>(
     setup: Box<dyn FnOnce() -> TestResult>,
     cleanup: Box<dyn FnOnce()>,
     bin: &str,
@@ -16,10 +16,11 @@ pub fn test_cargo_bin<I, P>(
     stdin: &str,
     success: bool,
     stdout_pred: I,
-    stderr_pred: I,
+    stderr_pred: J,
 ) -> TestResult
 where
     I: IntoOutputPredicate<P>,
+    J: IntoOutputPredicate<P>,
     P: Predicate<[u8]>,
 {
     setup()?;

@@ -119,7 +119,7 @@ fn count_does_not_exist() -> common::TestResult {
         "",
         false,
         "",
-        "wc: No such file or directory (os error 2)\n",
+        "wc: does-not-exist: No such file or directory (os error 2)\n",
     );
 }
 
@@ -134,6 +134,6 @@ fn count_permission_denied() -> common::TestResult {
         "",
         false,
         "",
-        "wc: Permission denied (os error 13)\n",
+        "wc: tests/inputs/notallowed: Permission denied (os error 13)\n",
     );
 }
