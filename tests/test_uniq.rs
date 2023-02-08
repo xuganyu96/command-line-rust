@@ -1,8 +1,4 @@
-//! Integration tests for uniq, including the following variations:
-//! input can come from stdin or some file
-//! output can go to stdout or some file
-//! use the "count" flag or not
-//! several different inputs
+//! integration tests of my implementation of "uniq"
 use std::{
     fs::File,
     io::{ BufReader, BufRead },
@@ -56,9 +52,9 @@ fn test_bin(
 }
 
 #[test]
-fn cities() -> TestResult {
+fn cities_stdin_fileout() -> TestResult {
     let outfile = NamedTempFile::new()?;
-    let cmd = Command::new("uniq");
+    let cmd = Command::cargo_bin("uniq")?;
 
     test_bin(
         cmd,
@@ -73,3 +69,159 @@ fn cities() -> TestResult {
 
     return Ok(());
 }
+
+#[test]
+fn cities_stdin_stdout() -> TestResult {
+    let cmd = Command::cargo_bin("uniq")?;
+
+    return test_bin(cmd,
+        &[],
+        "Madrid\nMadrid\nLisbon\n",
+        true,
+        "Madrid\nLisbon\n", "",
+        None, None
+    );
+}
+
+#[test]
+fn empty_filein_fileout() -> TestResult {
+    let outfile = NamedTempFile::new()?;
+
+    // Test outputting to output file
+    return test_bin(
+        Command::cargo_bin("uniq")?,
+        &["tests/uniq/empty.txt", outfile.path().to_str().unwrap()],
+        "",
+        true,
+        "", "",
+        Some(outfile.path().to_str().unwrap()),
+        Some(""),
+    );
+}
+
+#[test]
+fn count_empty_filein_stdout() -> TestResult {
+    return test_bin(
+        Command::cargo_bin("uniq")?,
+        &["-c", "tests/uniq/empty.txt"],
+        "",
+        true,
+        "", "",
+        None, None,
+    );
+}
+
+#[test]
+fn empty_filein_stdout() -> TestResult {
+    return test_bin(
+        Command::cargo_bin("uniq")?,
+        &["tests/uniq/empty.txt"],
+        "",
+        true,
+        "", "",
+        None, None,
+    );
+}
+
+#[test]
+fn test_skip() -> TestResult {
+    let outfile = NamedTempFile::new()?;
+
+    test_bin(
+        Command::cargo_bin("uniq")?,
+        &["tests/uniq/skip.txt", outfile.path().to_str().unwrap()],
+        "",
+        true,
+        "", "",
+        Some(outfile.path().to_str().unwrap()),
+        Some("a\n\na\nb\n"),
+    )?;
+
+    return Ok(());
+}
+
+#[test]
+fn count_skip() -> TestResult {
+    return test_bin(
+        Command::cargo_bin("uniq")?,
+        &["-c", "tests/uniq/skip.txt"],
+        "",
+        true,
+        "   1 a
+   1 
+   1 a
+   1 b\n", "",
+        None, None,
+    );
+}
+
+#[test]
+fn fullset() -> TestResult {
+    let outfile = NamedTempFile::new()?;
+    return test_bin(
+        Command::cargo_bin("uniq")?,
+        &["tests/uniq/full.txt", outfile.path().to_str().unwrap()],
+        "",
+        true,
+        "", "",
+        Some(outfile.path().to_str().unwrap()),
+        Some("a
+
+a
+b
+
+a
+b
+
+b
+a
+
+a
+b
+c
+
+a
+b
+a
+c
+a
+d
+"),
+    );
+}
+
+#[test]
+fn count_fullset() -> TestResult {
+    let outfile = NamedTempFile::new()?;
+    return test_bin(
+        Command::cargo_bin("uniq")?,
+        &["-c", "tests/uniq/full.txt", outfile.path().to_str().unwrap()],
+        "",
+        true,
+        "", "",
+        Some(outfile.path().to_str().unwrap()),
+        Some("   2 a
+   1 
+   1 a
+   1 b
+   1 
+   2 a
+   1 b
+   1 
+   1 b
+   2 a
+   1 
+   1 a
+   1 b
+   1 c
+   1 
+   2 a
+   2 b
+   1 a
+   3 c
+   1 a
+   4 d
+"),
+    );
+}
+
