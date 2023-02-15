@@ -30,7 +30,7 @@ fn test_bin(
 #[test]
 fn find_all() -> TestResult {
     return test_bin(
-        Command::new("find"),
+        Command::cargo_bin("find")?,
         &["tests/find"],
         true,
         "tests/find
@@ -57,8 +57,8 @@ tests/find/d/e/e.mp3
 #[test]
 fn find_files() -> TestResult {
     return test_bin(
-        Command::new("find"),
-        &["tests/find", "-type", "f"],
+        Command::cargo_bin("find")?,
+        &["tests/find", "--type", "f"],
         true,
         "tests/find/g.csv
 tests/find/a/a.txt
@@ -76,8 +76,8 @@ tests/find/d/e/e.mp3
 #[test]
 fn find_dirs() -> TestResult {
     return test_bin(
-        Command::new("find"),
-        &["tests/find", "-type", "d"],
+        Command::cargo_bin("find")?,
+        &["tests/find", "--type", "d"],
         true,
         "tests/find
 tests/find/a
@@ -94,8 +94,8 @@ tests/find/d/e
 #[test]
 fn find_links() -> TestResult {
     return test_bin(
-        Command::new("find"),
-        &["tests/find", "-type", "l"],
+        Command::cargo_bin("find")?,
+        &["tests/find", "--type", "l"],
         true,
         "tests/find/d/b.csv
 ",
@@ -106,8 +106,8 @@ fn find_links() -> TestResult {
 #[test]
 fn find_txts() -> TestResult {
     return test_bin(
-        Command::new("find"),
-        &["tests/find", "-regex", ".*\\.txt"],
+        Command::cargo_bin("find")?,
+        &["tests/find", "--regex", ".*\\.txt"],
         true,
         "tests/find/a/a.txt
 tests/find/f/f.txt
@@ -120,8 +120,8 @@ tests/find/d/d.txt
 #[test]
 fn find_csv() -> TestResult {
     return test_bin(
-        Command::new("find"),
-        &["tests/find", "-regex", ".*\\.csv"],
+        Command::cargo_bin("find")?,
+        &["tests/find", "--regex", ".*\\.csv"],
         true,
         "tests/find/g.csv
 tests/find/a/b/b.csv
@@ -134,8 +134,8 @@ tests/find/d/b.csv
 #[test]
 fn find_mp3() -> TestResult {
     return test_bin(
-        Command::new("find"),
-        &["tests/find", "-regex", ".*\\.mp3"],
+        Command::cargo_bin("find")?,
+        &["tests/find", "--regex", ".*\\.mp3"],
         true,
         "tests/find/a/b/c/c.mp3
 tests/find/d/e/e.mp3

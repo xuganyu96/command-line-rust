@@ -1,7 +1,7 @@
 use std::error::Error;
 use clap::{ Parser, ValueEnum };
 use regex::Regex;
-use walkdir::WalkDir;
+use walkdir::{ WalkDir, DirEntry };
 
 type MyResult<T> = Result<T, Box<dyn Error>>;
 
@@ -13,6 +13,16 @@ enum EntryType {
     L,
     /// directory
     D,
+}
+
+impl EntryType {
+    fn match_type(&self, entry: &DirEntry) -> bool {
+        return match self {
+            Self::F => entry.file_type().is_file(),
+            Self::D => entry.file_type().is_dir(),
+            Self::L => entry.file_type().is_symlink(),
+        };
+    }
 }
 
 /// Walk a file hierarchy
@@ -39,17 +49,26 @@ fn walk_dir(
     types: &[EntryType],
     reg_exprs: &[Regex],
 ) {
-    dbg!(root);
-    dbg!(types);
-    dbg!(reg_exprs);
     let walkdir = WalkDir::new(root);
 
     for entry in walkdir {
         match entry {
             Err(e) => eprintln!("{e}"),
             Ok(entry) => {
-                // if the entry match any of type or regex, print to stdout
-                println!("{}", entry.path().display());
+                let match_type = types.iter()
+                    .map(|t| t.match_type(&entry))
+                    .any(|b| b);
+                let match_regex = reg_exprs.iter()
+                    .map(|rx| {
+                        if let Some(path) = entry.path().to_str() {
+                            return rx.is_match(path);
+                        }
+                        return false;
+                    })
+                    .any(|b| b);
+                if match_type || match_regex || (types.len() == 0 && reg_exprs.len() == 0) {
+                    println!("{}", entry.path().display());
+                }
             }
         }
     }
