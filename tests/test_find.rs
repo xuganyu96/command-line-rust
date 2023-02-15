@@ -107,7 +107,7 @@ fn find_links() -> TestResult {
 fn find_txts() -> TestResult {
     return test_bin(
         Command::new("find"),
-        &["tests/find", "-name", "*.txt"],
+        &["tests/find", "-regex", ".*\\.txt"],
         true,
         "tests/find/a/a.txt
 tests/find/f/f.txt
@@ -121,7 +121,7 @@ tests/find/d/d.txt
 fn find_csv() -> TestResult {
     return test_bin(
         Command::new("find"),
-        &["tests/find", "-name", "*.csv"],
+        &["tests/find", "-regex", ".*\\.csv"],
         true,
         "tests/find/g.csv
 tests/find/a/b/b.csv
@@ -135,7 +135,7 @@ tests/find/d/b.csv
 fn find_mp3() -> TestResult {
     return test_bin(
         Command::new("find"),
-        &["tests/find", "-name", "*.mp3"],
+        &["tests/find", "-regex", ".*\\.mp3"],
         true,
         "tests/find/a/b/c/c.mp3
 tests/find/d/e/e.mp3
