@@ -8,6 +8,13 @@ use clap::Parser;
 
 type MyResult<T> = Result<T, Box<dyn Error>>;
 
+/// Encapsulation of the (mutually exclusive) three possible types of ranges
+enum CutRange {
+    ByteRange(Range<usize>),
+    CharRange(Range<usize>),
+    FieldRange(Range<usize>, char),
+}
+
 /// cut out selected portions of each line of a file
 #[derive(Parser, Debug)]
 struct Args {
@@ -39,36 +46,90 @@ struct Args {
 /// passed to the appropriate parse method for parsing string into integers.
 /// The start and stop indices are separated by a single "-". Preceding zeros
 /// are acceptable, but preceding signs +/- are not
-fn parse_range<Idx>(input: &str) -> MyResult<Range<Idx>> {
-    todo!();
+fn parse_range(input: &str) -> MyResult<Range<usize>> {
+    // implement custom error:
+    // https://xuganyu96.github.io/rust/2023/01/28/command-line-rust-notes-2.html
+    todo!(); // need to implement this
+    return Ok(0usize..2usize);  // ..  for exclusive range, 
+                                 // ..= for inclusive range
 }
 
-fn parse_ranges<Idx>(input: &str) -> Vec<Range<Idx>> {
-    todo!();
-}
-
+/// Attempt to open the the file or stdin
 fn open(path: &str) -> MyResult<Box<dyn BufRead>> {
-    todo!();
+    match path {
+        "" | "-" => Ok(Box::new(BufReader::new(io::stdin()))),
+        _ => Ok(Box::new(BufReader::new(File::open(path)?))),
+    }
 }
 
-fn cut_bytes(line: &str, ranges: Vec<Range<usize>>) -> String {
-    todo!();
+fn cut_bytes(line: &str, range: &Range<usize>) -> String {
+    let bytes: Vec<u8> = line.bytes()
+        .enumerate()
+        .filter_map(|(i, byte)| {
+            if range.contains(&i) {
+                return Some(byte);
+            }
+            return None;
+        })
+        .collect();
+    return String::from_utf8_lossy(&bytes).to_string();
 }
 
-fn cut_chars(line: &str, range: Vec<Range<usize>>) -> String {
-    todo!();
+fn cut_chars(line: &str, range: &Range<usize>) -> String {
+    return line.chars()
+        .enumerate()
+        .filter_map(|(i, char_)| {
+            if range.contains(&i) {
+                return Some(char_);
+            }
+            return None;
+        })
+        .collect();  // Vec<Char> can automatically convert to String
 }
 
-fn cut_fields(line: &str, delimiter: char, range: Vec<Range<usize>>) -> String {
-    todo!();
+fn cut_fields(line: &str, delimiter: &char, range: &Range<usize>) -> String {
+    let delimiter = delimiter.to_string();
+    return line.split(&delimiter)
+        .enumerate()
+        .filter_map(|(i, val)| {
+            if range.contains(&i) {
+                return Some(val.to_string());
+            }
+            return None;
+        })
+        .collect::<Vec<String>>()
+        .join(&delimiter);
 }
 
-/// Given a buffered reader, return an iterator that applies the cutting func
-/// on individual lines from the buffered reader
+/// Given a string slice and a slice of ranges, return the result of cutting
+/// the line according to the input ranges
+fn cut_line(line: &str, ranges: &[CutRange]) -> String {
+    let fragments: Vec<String> = ranges.iter()
+        .map(|range| {
+            match range {
+                CutRange::ByteRange(range) => cut_bytes(line, range),
+                CutRange::CharRange(range) => cut_chars(line, range),
+                CutRange::FieldRange(range, delim) => cut_fields(line, delim, range),
+            }
+        })
+        .collect();
+    return fragments.concat();
+}
+
+/// Given a buffered reader, return a vector of string, where each string is
+/// the result of cutting the original line based on the input ranges
 fn cut_reader(
-    mut reader: Box<dyn BufRead>
-) -> Box<dyn Iterator<Item=String>> {
-    todo!();
+    reader: Box<dyn BufRead>,
+    ranges: &[CutRange],
+) -> Vec<String> {
+    return reader.lines()
+        .map(|line_or_err| {
+            match line_or_err {
+                Ok(line) => cut_line(&line, ranges),
+                Err(e) => format!("{e}"),
+            }
+        })
+        .collect();
 }
 
 /// The main routine of the cut program: parse the arguments to obtain the
@@ -79,14 +140,33 @@ fn cut_reader(
 /// to an iterator of iterator of Strings
 pub fn run() -> MyResult<()> {
     let args = Args::try_parse()?;
-    // TODO: further parse range strings into ranges
+    let ranges: Vec<CutRange> = match (
+        &args.byte_ranges,
+        &args.char_ranges,
+        &args.field_ranges,
+    ) {
+        (Some(ranges_str), None, None) => ranges_str
+            .split(',')
+            .map(|range_str| CutRange::ByteRange(parse_range(range_str).unwrap()))
+            .collect(),
+        (None, Some(ranges_str), None) => ranges_str
+            .split(',')
+            .map(|range_str| CutRange::CharRange(parse_range(range_str).unwrap()))
+            .collect(),
+        (None, None, Some(ranges_str)) => ranges_str
+            .split(',')
+            .map(|range_str| 
+                 CutRange::FieldRange(parse_range(range_str).unwrap(), args.delimiter))
+            .collect(),
+        _ => unreachable!("At least one list should be supplied"),
+    };
 
     args.files.iter()
         .map(|path| open(path))
-        .map(|reader_or_err| reader_or_err.map(|reader| cut_reader(reader)))
+        .map(|reader_or_err| reader_or_err.map(|reader| cut_reader(reader, &ranges)))
         .for_each(|lines_or_err| {
             match lines_or_err {
-                Ok(lines) => lines.for_each(|line| println!("{line}")),
+                Ok(lines) => lines.iter().for_each(|line| println!("{line}")),
                 Err(e) => eprintln!("{e}"),
             }
         });
@@ -97,12 +177,34 @@ pub fn run() -> MyResult<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
-    /// Note that while doc-test can also be appropriate, doc tests can only
-    /// be applied to public functions/structs/enums since you need to import
-    /// them from the top level like "command_line_rust::libcut::parse_range"
+
     #[test]
-    fn test_parse_range() {
-        assert!(parse_range::<usize>("0").is_err());
+    fn cut_bytes_legit() {
+        let line = "012345";
+        let range = 0usize..4usize;
+        assert_eq!(cut_bytes(line, &range), "0123");
+    }
+
+    #[test]
+    fn test_cut_chars() {
+        let line = "那么古尔丹，代价是什么呢";
+        let range = 2usize..5usize;
+        assert_eq!(cut_chars(line, &range), "古尔丹");
+    }
+
+    #[test]
+    fn test_cut_csv() {
+        let line = "0,1,2,3,4,5,6,7,8,9";
+        let delim = ',';
+        let range = 0usize..4usize;
+        assert_eq!(cut_fields(line, &delim, &range), "0,1,2,3");
+    }
+
+    #[test]
+    fn test_cut_tsv_outside() {
+        let line = "0\t1\t2\t3\t4\t5\t6\t7\t8\t9";
+        let delim = '\t';
+        let range = 8usize..99usize;
+        assert_eq!(cut_fields(line, &delim, &range), "8\t9");
     }
 }
