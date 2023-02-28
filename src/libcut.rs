@@ -1,5 +1,6 @@
 use std::{
     error::Error,
+    fmt::{ self, Display, Formatter },
     fs::File,
     io::{ self, BufRead, BufReader },
     ops::Range,
@@ -42,16 +43,52 @@ struct Args {
     files: Vec<String>,
 }
 
+/// Error for when range string cannot be parsed into a range
+#[derive(Debug)]
+struct ParsingError {
+    msg: String,
+}
+
+impl Display for ParsingError {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        return write!(f, "{}", self.msg);
+    }
+}
+
+impl Error for ParsingError {}
+
 /// Parse the input string into a range, where the generic <Idx> will be
 /// passed to the appropriate parse method for parsing string into integers.
 /// The start and stop indices are separated by a single "-". Preceding zeros
 /// are acceptable, but preceding signs +/- are not
 fn parse_range(input: &str) -> MyResult<Range<usize>> {
-    // implement custom error:
-    // https://xuganyu96.github.io/rust/2023/01/28/command-line-rust-notes-2.html
-    todo!(); // need to implement this
-    return Ok(0usize..2usize);  // ..  for exclusive range, 
-                                 // ..= for inclusive range
+    if let Ok(num) = input.parse::<usize>() {
+        if num == 0 {
+            return Err(Box::new(ParsingError{
+                msg: "list: value may not contain 0's".to_string()
+            }));
+        }
+        return Ok((num-1)..num);
+    }
+    match input.split_once("-") {
+        None => {
+            return Err(
+                Box::new(
+                    ParsingError{ msg: "list: invalid input".to_string() }
+                )
+            );
+        },
+        Some((start, end)) => {
+            let start: usize = start.parse()?;
+            let end: usize = end.parse()?;
+            if start == 0 || end == 0 {
+                return Err(Box::new(ParsingError{
+                    msg: "list: value may not contain 0's".to_string()
+                }));
+            }
+            return Ok((start-1)..end);
+        }
+    }
 }
 
 /// Attempt to open the the file or stdin
@@ -140,6 +177,26 @@ fn cut_reader(
 /// to an iterator of iterator of Strings
 pub fn run() -> MyResult<()> {
     let args = Args::try_parse()?;
+    let mut ranges: Vec<CutRange> = vec![];
+    if let Some(ranges_str) = &args.byte_ranges {
+        for range_str in ranges_str.split(",") {
+            let range = CutRange::ByteRange(parse_range(range_str)?);
+            ranges.push(range);
+        }
+    }
+    if let Some(ranges_str) = &args.char_ranges {
+        for range_str in ranges_str.split(",") {
+            let range = CutRange::CharRange(parse_range(range_str)?);
+            ranges.push(range);
+        }
+    }
+    if let Some(ranges_str) = &args.field_ranges {
+        for range_str in ranges_str.split(",") {
+            let range = CutRange::FieldRange(parse_range(range_str)?, args.delimiter);
+            ranges.push(range);
+        }
+    }
+
     let ranges: Vec<CutRange> = match (
         &args.byte_ranges,
         &args.char_ranges,
