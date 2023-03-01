@@ -1,3 +1,10 @@
+use std::process;
+use command_line_rust::libgrep::run;
+
 fn main() {
-    println!("Hello, world");
+    if let Err(e) = run() {
+        eprintln!("grep: {e}");
+        process::exit(1);
+    }
+    process::exit(0);
 }
