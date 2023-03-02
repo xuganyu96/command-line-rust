@@ -2,7 +2,7 @@ use assert_cmd::Command;
 
 #[test]
 fn test_empty() {
-    Command::new("grep")
+    Command::cargo_bin("grep").unwrap()
         .args(&["fox", "tests/grep/empty.txt"])
         .assert()
         .failure()
@@ -12,14 +12,14 @@ fn test_empty() {
 
 #[test]
 fn test_case_sensitivity() {
-    Command::new("grep")
+    Command::cargo_bin("grep").unwrap()
         .args(&["nobody", "tests/grep/nobody.txt"])
         .assert()
         .failure()
         .stdout("")
         .stderr("");
 
-    Command::new("grep")
+    Command::cargo_bin("grep").unwrap()
         .args(&["Nobody", "tests/grep/nobody.txt"])
         .assert()
         .success()
@@ -31,7 +31,7 @@ Are you—Nobody—too?
 
 #[test]
 fn test_ignore_case() {
-    Command::new("grep")
+    Command::cargo_bin("grep").unwrap()
         .args(&["-i", "nobody", "tests/grep/nobody.txt"])
         .assert()
         .success()
@@ -43,7 +43,7 @@ Are you—Nobody—too?
 
 #[test]
 fn test_invert_match() {
-    Command::new("grep")
+    Command::cargo_bin("grep").unwrap()
         .args(&["-v", "Nobody", "tests/grep/nobody.txt"])
         .assert()
         .success()
@@ -60,7 +60,7 @@ To an admiring Bog!
 
 #[test]
 fn test_count() {
-    Command::new("grep")
+    Command::cargo_bin("grep").unwrap()
         .args(&["-c", "Nobody", "tests/grep/nobody.txt"])
         .assert()
         .success()
@@ -70,7 +70,7 @@ fn test_count() {
 
 #[test]
 fn test_multiple_files() {
-    Command::new("grep")
+    Command::cargo_bin("grep").unwrap()
         .args(&["the", "tests/grep/nobody.txt", "tests/grep/bustle.txt"])
         .assert()
         .success()
@@ -84,7 +84,7 @@ tests/grep/bustle.txt:The sweeping up the heart,
 
 #[test]
 fn test_directory_nonrecursive() {
-    Command::new("grep")
+    Command::cargo_bin("grep").unwrap()
         .args(&["the", "tests/grep"])
         .assert()
         .failure()
@@ -94,7 +94,7 @@ fn test_directory_nonrecursive() {
 
 #[test]
 fn test_directory_recursive() {
-    Command::new("grep")
+    Command::cargo_bin("grep").unwrap()
         .args(&["-r", "the", "tests/grep"])
         .assert()
         .success()
