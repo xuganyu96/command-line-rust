@@ -10,10 +10,6 @@ type MyResult<T> = Result<T, Box<dyn Error>>;
 /// select or reject lines common to two files
 #[derive(Debug, Parser)]
 struct Args {
-    /// Case insensitive comparison of lines
-    #[arg(short = 'i')]
-    ignore_case: bool,
-
     /// Supress printing of column 1
     #[arg(short = '1')]
     sup1: bool,
@@ -38,6 +34,38 @@ enum Column {
     Col3(String),
 }
 
+impl Column {
+    fn to_string(&self) -> String {
+        return match self {
+            Self::Col1(s) => s.clone(),
+            Self::Col2(s) => s.clone(),
+            Self::Col3(s) => s.clone(),
+        }
+    }
+    /// Convert a single column to String according to the supression config
+    fn to_line(
+        &self,
+        sup1: bool,
+        sup2: bool,
+        sup3: bool,) -> Option<String> {
+        let prefix = match (self, sup1, sup2) {
+            (Self::Col1(_), _, _) => "",
+            (Self::Col2(_), false, _) => "\t",
+            (Self::Col2(_), true, _) => "",
+            (Self::Col3(_), true, true) => "",
+            (Self::Col3(_), false, true) | (Self::Col3(_), true, false) => "\t",
+            (Self::Col3(_), false, false) => "\t\t",
+        };
+
+        return match (self, sup1, sup2, sup3) {
+            (Self::Col1(_), true, _, _) => None,
+            (Self::Col2(_), _, true, _) => None,
+            (Self::Col3(_), _, _, true) => None,
+            _ => Some(format!("{prefix}{}", self.to_string())),
+        };
+    }
+}
+
 /// Return a reader on a file
 fn open(path: &str) -> MyResult<Box<dyn BufRead>> {
     return match path {
@@ -52,19 +80,56 @@ fn compare<T, U>(
     reader2: &mut U,
 ) -> Vec<Column> 
 where T: BufRead,
-      U: BufRead, {
-  return vec![];
-}
+      U: BufRead {
+    let lines1: Vec<String> = reader1.lines()
+        .filter_map(|line_or_err| {
+            if let Ok(line) = line_or_err {
+                return Some(line);
+            }
+            return None;
+        })
+        .collect();
+    let lines2: Vec<String> = reader2.lines()
+        .filter_map(|line_or_err| {
+            if let Ok(line) = line_or_err {
+                return Some(line);
+            }
+            return None;
+        })
+        .collect();
+    let mut columns = vec![];
+    let mut i = 0;
+    let mut j = 0;
+    while i < lines1.len() || j < lines2.len() {
+        let line1 = lines1.get(i);
+        let line2 = lines2.get(j);
+        match (line1, line2) {
+            (None, None) => unreachable!(),
+            (Some(line1), None) => {
+                columns.push(Column::Col1(line1.clone()));
+                i += 1;
+            },
+            (None, Some(line2)) => {
+                columns.push(Column::Col2(line2.clone()));
+                j += 1;
+            },
+            (Some(line1), Some(line2)) => {
+                if line1 == line2 {
+                    columns.push(Column::Col3(line1.clone()));
+                    i += 1;
+                    j += 1;
+                } else if line1 < line2 {
+                    columns.push(Column::Col1(line1.clone()));
+                    i += 1;
+                } else {
+                    columns.push(Column::Col2(line2.clone()));
+                    j += 1;
+                }
+            }
+        }
+    }
 
-/// Apply the appropriate padding to the list of columns and return the list
-/// of lines to print
-fn print_columns(
-    columns: &[Column],
-    not_col1: bool,
-    not_col2: bool,
-    not_col3: bool,
-) -> Vec<String> {
-    return vec![];
+    return columns;
 }
 
 pub fn run() -> MyResult<i32> {
@@ -72,13 +137,12 @@ pub fn run() -> MyResult<i32> {
     if &args.file1 == "-" && &args.file2 == "-" {
         return Err("Two files cannot both be stdin".into());
     }
-    dbg!(&args);
     let mut reader1 = open(&args.file1)?;
     let mut reader2 = open(&args.file2)?;
 
     let columns = compare(&mut reader1, &mut reader2);
-    print_columns(&columns, args.sup1, args.sup2, args.sup3)
-        .iter()
+    columns.iter()
+        .filter_map(|column| column.to_line(args.sup1, args.sup2, args.sup3))
         .for_each(|line| println!("{line}"));
 
     return Ok(0);

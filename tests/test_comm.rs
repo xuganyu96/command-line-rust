@@ -19,7 +19,7 @@ const EMPTY: &str = "tests/comm/empty.txt";
 
 #[test]
 fn test_faang_empty() -> TestResult {
-    Command::new("comm")
+    Command::cargo_bin("comm")?
         .args(&[FAANG, EMPTY])
         .assert()
         .try_success()?
@@ -36,7 +36,7 @@ Netflix
 
 #[test]
 fn test_empty_faang() -> TestResult {
-    Command::new("comm")
+    Command::cargo_bin("comm")?
         .args(&[EMPTY, FAANG])
         .assert()
         .try_success()?
@@ -52,7 +52,7 @@ fn test_empty_faang() -> TestResult {
 
 #[test]
 fn test_faang_manga() -> TestResult {
-    Command::new("comm")
+    Command::cargo_bin("comm")?
         .args(&[FAANG, MANGA])
         .assert()
         .try_success()?
@@ -70,7 +70,7 @@ Facebook
 
 #[test]
 fn test_faang_manga_1() -> TestResult {
-    Command::new("comm")
+    Command::cargo_bin("comm")?
         .args(&["-23", FAANG, MANGA])
         .assert()
         .try_success()?
@@ -81,7 +81,7 @@ fn test_faang_manga_1() -> TestResult {
 
 #[test]
 fn test_faang_manga_2() -> TestResult {
-    Command::new("comm")
+    Command::cargo_bin("comm")?
         .args(&["-13", FAANG, MANGA])
         .assert()
         .try_success()?
@@ -92,7 +92,7 @@ fn test_faang_manga_2() -> TestResult {
 
 #[test]
 fn test_faang_manga_3() -> TestResult {
-    Command::new("comm")
+    Command::cargo_bin("comm")?
         .args(&["-12", FAANG, MANGA])
         .assert()
         .try_success()?
@@ -100,22 +100,6 @@ fn test_faang_manga_3() -> TestResult {
 Apple
 Google
 Netflix
-")?
-        .try_stderr("")?;
-    return Ok(());
-}
-
-#[test]
-fn test_case_insensitive() -> TestResult {
-    Command::new("comm")
-        .args(&["-i", FAANG, LOWER])
-        .assert()
-        .try_success()?
-        .try_stdout("		Amazon
-		Apple
-		Facebook
-		Google
-		Netflix
 ")?
         .try_stderr("")?;
     return Ok(());
