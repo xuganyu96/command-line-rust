@@ -6,3 +6,4 @@ pub mod libfind;
 pub mod libcut;
 pub mod libgrep;
 pub mod libcomm;
+pub mod libtail;
