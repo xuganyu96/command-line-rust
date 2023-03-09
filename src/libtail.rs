@@ -2,13 +2,76 @@
 use std::{
     io::{ Read, Seek, SeekFrom, BufRead },
     error::Error,
+    fmt::{ self, Display, Formatter },
 };
+use clap::Parser;
+use regex::Regex;
 
 type MyResult<T> = Result<T, Box<dyn Error>>;
 
-// TODO: Implement Args
-// TODO: parse Args into the appropriate TakeValue
-// TODO: match TakeValue to the appropriate function call
+/// Display the last part of a file
+#[derive(Debug,Parser)]
+struct Args {
+    /// The location is this number of lines
+    #[arg(short = 'n')]
+    lines_offset: Option<String>,
+
+    /// the location is this number of bytes
+    #[arg(short = 'c')]
+    #[arg(conflicts_with("lines_offset"))]
+    byte_offset: Option<String>,
+
+    /// Suppresses printing of headers when multiple files are being examined
+    #[arg(short = 'q')]
+    quiet: bool,
+    
+    files: Vec<String>,
+}
+
+#[derive(Debug,PartialEq,Eq)]
+enum TakeValue {
+    Start(usize),
+    Last(usize),
+}
+
+#[derive(Debug)]
+struct ParseTakeValueError {
+    val: String,
+}
+
+impl ParseTakeValueError {
+    fn new(val: &str) -> Self {
+        return Self{ val: val.to_string() };
+    }
+}
+
+impl Display for ParseTakeValueError {
+    fn fmt(&self, fmt: &mut Formatter) -> fmt::Result {
+        return write!(fmt, "illegal offset -- {}", self.val);
+    }
+}
+
+impl Error for ParseTakeValueError {}
+
+/// Challenge: learn to implement std::str::FromStr
+impl TakeValue {
+    /// Take the argument that follows -c/-n and parse it into a TakeValue
+    fn parse(s: &str) -> MyResult<Self> {
+        let query = Regex::new(r"^(?P<sign>[+-]?)(?P<loc>[0-9]+)$")?;
+        let caps = query.captures(s);
+        if let Some(caps) = caps {
+            let sign = &caps["sign"];
+            let loc: usize = (&caps["loc"]).parse()?;
+            let val = match sign {
+                "+" => Self::Start(loc),
+                "-" | "" => Self::Last(loc),
+                _ => unreachable!(),
+            };
+            return Ok(val);
+        }
+        return Err(Box::new(ParseTakeValueError::new(s)));
+    }
+}
 
 /// Reader from the specified byte location using 0-based indexing. If the
 /// starting location is such that no additional bytes can be read, then
@@ -75,6 +138,9 @@ where T: BufRead + Seek {
 }
 
 pub fn run() -> MyResult<i32> {
+    let args = Args::try_parse()?;
+    dbg!(args);
+
     return Ok(0);
 }
 
@@ -125,5 +191,17 @@ mod tests {
         assert_eq!(tail_n_lines(&mut cursor, 10).unwrap(), "0\n1\n2\n3\n4\n5\n6\n7\n8\n9");
         cursor.seek(SeekFrom::Start(0)).unwrap();
         assert_eq!(tail_n_lines(&mut cursor, 11).unwrap(), "0\n1\n2\n3\n4\n5\n6\n7\n8\n9");
+    }
+
+    #[test]
+    fn test_parse_take_value() {
+        assert!(TakeValue::parse("xx").is_err());
+        assert!(TakeValue::parse("99xx").is_err());
+        assert!(TakeValue::parse("").is_err());
+        assert_eq!(TakeValue::parse("4").unwrap(), TakeValue::Last(4));
+        assert_eq!(TakeValue::parse("0").unwrap(), TakeValue::Last(0));
+        assert_eq!(TakeValue::parse("-4").unwrap(), TakeValue::Last(4));
+        assert_eq!(TakeValue::parse("+4").unwrap(), TakeValue::Start(4));
+        assert_eq!(TakeValue::parse("+0").unwrap(), TakeValue::Start(0));
     }
 }
