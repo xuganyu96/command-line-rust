@@ -1,6 +1,7 @@
 //! Library for the tail program
 use std::{
-    io::{ Read, Seek, SeekFrom, BufRead },
+    io::{ Read, Seek, SeekFrom, BufRead, BufReader },
+    fs::File,
     error::Error,
     fmt::{ self, Display, Formatter },
 };
@@ -33,6 +34,8 @@ enum TakeValue {
     Start(usize),
     Last(usize),
 }
+
+use TakeValue::{ Last, Start };
 
 #[derive(Debug)]
 struct ParseTakeValueError {
@@ -137,9 +140,109 @@ where T: BufRead + Seek {
     }
 }
 
+/// Open a file
+fn open(path: &str) -> MyResult<BufReader<File>> {
+    let file = File::open(path)?;
+    return Ok(BufReader::new(file));
+}
+
 pub fn run() -> MyResult<i32> {
     let args = Args::try_parse()?;
-    dbg!(args);
+    let nfiles = args.files.len();
+    let lines_offset_str = match args.lines_offset {
+        Some(offset) => offset,
+        None => "10".to_string(),
+    };
+    
+    // If byte_offset is provided, then execute the byte functions
+    if let Some(byte_offset) = &args.byte_offset {
+        let take_val = TakeValue::parse(byte_offset)?;
+        match take_val {
+            Start(n) => {
+                args.files.iter().enumerate()
+                    .for_each(|(i, path)| {
+                        match open(path) {
+                            Err(e) => {
+                                eprintln!("{path}: {e}");
+                            },
+                            Ok(mut reader) => {
+                                if !args.quiet && nfiles > 1 {
+                                    println!("==> {path} <==");
+                                }
+                                let tail = read_bytes_from(&mut reader, n as u64).unwrap();
+                                println!("{}", tail);
+                                if i < nfiles - 1 {
+                                    println!("");
+                                }
+                            },
+                        }
+                    });
+            },
+            Last(n) => {
+                args.files.iter().enumerate()
+                    .for_each(|(i, path)| {
+                        match open(path) {
+                            Err(e) => {
+                                eprintln!("{path}: {e}");
+                            },
+                            Ok(mut reader) => {
+                                if !args.quiet && nfiles > 1 {
+                                    println!("==> {path} <==");
+                                }
+                                let tail = tail_n_bytes(&mut reader, -(n as i64)).unwrap();
+                                println!("{}", tail);
+                                if i < nfiles - 1 {
+                                    println!("");
+                                }
+                            },
+                        }
+                    });
+            }
+        }
+    } else {
+        match TakeValue::parse(&lines_offset_str)? {
+            Start(n) => {
+                args.files.iter().enumerate()
+                    .for_each(|(i, path)| {
+                        match open(path) {
+                            Err(e) => {
+                                eprintln!("{path}: {e}");
+                            },
+                            Ok(mut reader) => {
+                                if !args.quiet && nfiles > 1 {
+                                    println!("==> {path} <==");
+                                }
+                                let tail = read_lines_from(&mut reader, n).unwrap();
+                                println!("{}", tail);
+                                if i < nfiles - 1 {
+                                    println!("");
+                                }
+                            },
+                        }
+                    });
+            },
+            Last(n) => {
+                args.files.iter().enumerate()
+                    .for_each(|(i, path)| {
+                        match open(path) {
+                            Err(e) => {
+                                eprintln!("{path}: {e}");
+                            },
+                            Ok(mut reader) => {
+                                if !args.quiet && nfiles > 1 {
+                                    println!("==> {path} <==");
+                                }
+                                let tail = tail_n_lines(&mut reader, n).unwrap();
+                                println!("{}", tail);
+                                if i < nfiles - 1 {
+                                    println!("");
+                                }
+                            },
+                        }
+                    });
+            }
+        }
+    }
 
     return Ok(0);
 }
