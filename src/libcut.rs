@@ -1,11 +1,11 @@
+use clap::Parser;
 use std::{
     error::Error,
-    fmt::{ self, Display, Formatter },
+    fmt::{self, Display, Formatter},
     fs::File,
-    io::{ self, BufRead, BufReader },
+    io::{self, BufRead, BufReader},
     ops::Range,
 };
-use clap::Parser;
 
 type MyResult<T> = Result<T, Box<dyn Error>>;
 
@@ -64,29 +64,27 @@ impl Error for ParsingError {}
 fn parse_range(input: &str) -> MyResult<Range<usize>> {
     if let Ok(num) = input.parse::<usize>() {
         if num == 0 {
-            return Err(Box::new(ParsingError{
-                msg: "list: value may not contain 0's".to_string()
+            return Err(Box::new(ParsingError {
+                msg: "list: value may not contain 0's".to_string(),
             }));
         }
-        return Ok((num-1)..num);
+        return Ok((num - 1)..num);
     }
     match input.split_once("-") {
         None => {
-            return Err(
-                Box::new(
-                    ParsingError{ msg: "list: invalid input".to_string() }
-                )
-            );
-        },
+            return Err(Box::new(ParsingError {
+                msg: "list: invalid input".to_string(),
+            }));
+        }
         Some((start, end)) => {
             let start: usize = start.parse()?;
             let end: usize = end.parse()?;
             if start == 0 || end == 0 {
-                return Err(Box::new(ParsingError{
-                    msg: "list: value may not contain 0's".to_string()
+                return Err(Box::new(ParsingError {
+                    msg: "list: value may not contain 0's".to_string(),
                 }));
             }
-            return Ok((start-1)..end);
+            return Ok((start - 1)..end);
         }
     }
 }
@@ -100,7 +98,8 @@ fn open(path: &str) -> MyResult<Box<dyn BufRead>> {
 }
 
 fn cut_bytes(line: &str, range: &Range<usize>) -> String {
-    let bytes: Vec<u8> = line.bytes()
+    let bytes: Vec<u8> = line
+        .bytes()
         .enumerate()
         .filter_map(|(i, byte)| {
             if range.contains(&i) {
@@ -113,7 +112,8 @@ fn cut_bytes(line: &str, range: &Range<usize>) -> String {
 }
 
 fn cut_chars(line: &str, range: &Range<usize>) -> String {
-    return line.chars()
+    return line
+        .chars()
         .enumerate()
         .filter_map(|(i, char_)| {
             if range.contains(&i) {
@@ -121,12 +121,13 @@ fn cut_chars(line: &str, range: &Range<usize>) -> String {
             }
             return None;
         })
-        .collect();  // Vec<Char> can automatically convert to String
+        .collect(); // Vec<Char> can automatically convert to String
 }
 
 fn cut_fields(line: &str, delimiter: &char, range: &Range<usize>) -> String {
     let delimiter = delimiter.to_string();
-    return line.split(&delimiter)
+    return line
+        .split(&delimiter)
         .enumerate()
         .filter_map(|(i, val)| {
             if range.contains(&i) {
@@ -141,13 +142,12 @@ fn cut_fields(line: &str, delimiter: &char, range: &Range<usize>) -> String {
 /// Given a string slice and a slice of ranges, return the result of cutting
 /// the line according to the input ranges
 fn cut_line(line: &str, ranges: &[CutRange]) -> String {
-    let fragments: Vec<String> = ranges.iter()
-        .map(|range| {
-            match range {
-                CutRange::ByteRange(range) => cut_bytes(line, range),
-                CutRange::CharRange(range) => cut_chars(line, range),
-                CutRange::FieldRange(range, delim) => cut_fields(line, delim, range),
-            }
+    let fragments: Vec<String> = ranges
+        .iter()
+        .map(|range| match range {
+            CutRange::ByteRange(range) => cut_bytes(line, range),
+            CutRange::CharRange(range) => cut_chars(line, range),
+            CutRange::FieldRange(range, delim) => cut_fields(line, delim, range),
         })
         .collect();
     return fragments.concat();
@@ -155,16 +155,12 @@ fn cut_line(line: &str, ranges: &[CutRange]) -> String {
 
 /// Given a buffered reader, return a vector of string, where each string is
 /// the result of cutting the original line based on the input ranges
-fn cut_reader(
-    reader: Box<dyn BufRead>,
-    ranges: &[CutRange],
-) -> Vec<String> {
-    return reader.lines()
-        .map(|line_or_err| {
-            match line_or_err {
-                Ok(line) => cut_line(&line, ranges),
-                Err(e) => format!("{e}"),
-            }
+fn cut_reader(reader: Box<dyn BufRead>, ranges: &[CutRange]) -> Vec<String> {
+    return reader
+        .lines()
+        .map(|line_or_err| match line_or_err {
+            Ok(line) => cut_line(&line, ranges),
+            Err(e) => format!("{e}"),
         })
         .collect();
 }
@@ -175,7 +171,7 @@ fn cut_reader(
 ///
 /// Each file maps to an iterator of Strings, so an iterator of files will map
 /// to an iterator of iterator of Strings
-pub fn run() -> MyResult<()> {
+pub fn run() -> MyResult<i32> {
     let args = Args::try_parse()?;
     let mut ranges: Vec<CutRange> = vec![];
     if let Some(ranges_str) = &args.byte_ranges {
@@ -197,11 +193,7 @@ pub fn run() -> MyResult<()> {
         }
     }
 
-    let ranges: Vec<CutRange> = match (
-        &args.byte_ranges,
-        &args.char_ranges,
-        &args.field_ranges,
-    ) {
+    let ranges: Vec<CutRange> = match (&args.byte_ranges, &args.char_ranges, &args.field_ranges) {
         (Some(ranges_str), None, None) => ranges_str
             .split(',')
             .map(|range_str| CutRange::ByteRange(parse_range(range_str).unwrap()))
@@ -212,23 +204,21 @@ pub fn run() -> MyResult<()> {
             .collect(),
         (None, None, Some(ranges_str)) => ranges_str
             .split(',')
-            .map(|range_str| 
-                 CutRange::FieldRange(parse_range(range_str).unwrap(), args.delimiter))
+            .map(|range_str| CutRange::FieldRange(parse_range(range_str).unwrap(), args.delimiter))
             .collect(),
         _ => unreachable!("At least one list should be supplied"),
     };
 
-    args.files.iter()
+    args.files
+        .iter()
         .map(|path| open(path))
         .map(|reader_or_err| reader_or_err.map(|reader| cut_reader(reader, &ranges)))
-        .for_each(|lines_or_err| {
-            match lines_or_err {
-                Ok(lines) => lines.iter().for_each(|line| println!("{line}")),
-                Err(e) => eprintln!("{e}"),
-            }
+        .for_each(|lines_or_err| match lines_or_err {
+            Ok(lines) => lines.iter().for_each(|line| println!("{line}")),
+            Err(e) => eprintln!("{e}"),
         });
 
-    return Ok(());
+    return Ok(0);
 }
 
 #[cfg(test)]

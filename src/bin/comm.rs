@@ -1,5 +1,5 @@
-use std::process;
 use command_line_rust::libcomm::run;
+use std::process;
 
 fn main() {
     match run() {

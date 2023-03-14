@@ -1,10 +1,12 @@
-use std::process;
 use command_line_rust::libfind;
+use std::process;
 
 fn main() {
-    if let Err(e) = libfind::run() {
-        eprintln!("find: {e}");
-        process::exit(1);
+    match libfind::run() {
+        Ok(exit_code) => process::exit(exit_code),
+        Err(e) => {
+            eprintln!("find: {e}");
+            process::exit(1);
+        }
     }
-    process::exit(0);
 }

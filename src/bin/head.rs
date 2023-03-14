@@ -1,11 +1,13 @@
 //! head - display first lines of a file
-use command_line_rust::libhead::run;
-use std::process::exit;
+use command_line_rust::libhead;
+use std::process;
 
 fn main() {
-    if let Err(e) = run() {
-        eprintln!("head: {e}");
-        exit(1);
+    match libhead::run() {
+        Ok(exit_code) => process::exit(exit_code),
+        Err(e) => {
+            eprintln!("head: {e}");
+            process::exit(1);
+        }
     }
-    exit(0);
 }

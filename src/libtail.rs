@@ -1,17 +1,17 @@
 //! Library for the tail program
-use std::{
-    io::{ Read, Seek, SeekFrom, BufRead, BufReader },
-    fs::File,
-    error::Error,
-    fmt::{ self, Display, Formatter },
-};
 use clap::Parser;
 use regex::Regex;
+use std::{
+    error::Error,
+    fmt::{self, Display, Formatter},
+    fs::File,
+    io::{BufRead, BufReader, Read, Seek, SeekFrom},
+};
 
 type MyResult<T> = Result<T, Box<dyn Error>>;
 
 /// Display the last part of a file
-#[derive(Debug,Parser)]
+#[derive(Debug, Parser)]
 struct Args {
     /// The location is this number of lines
     #[arg(short = 'n')]
@@ -25,17 +25,17 @@ struct Args {
     /// Suppresses printing of headers when multiple files are being examined
     #[arg(short = 'q')]
     quiet: bool,
-    
+
     files: Vec<String>,
 }
 
-#[derive(Debug,PartialEq,Eq)]
+#[derive(Debug, PartialEq, Eq)]
 enum TakeValue {
     Start(usize),
     Last(usize),
 }
 
-use TakeValue::{ Last, Start };
+use TakeValue::{Last, Start};
 
 #[derive(Debug)]
 struct ParseTakeValueError {
@@ -44,7 +44,9 @@ struct ParseTakeValueError {
 
 impl ParseTakeValueError {
     fn new(val: &str) -> Self {
-        return Self{ val: val.to_string() };
+        return Self {
+            val: val.to_string(),
+        };
     }
 }
 
@@ -79,11 +81,10 @@ impl TakeValue {
 /// Reader from the specified byte location using 0-based indexing. If the
 /// starting location is such that no additional bytes can be read, then
 /// return empty string
-fn read_bytes_from<T>(
-    reader: &mut T,
-    loc: u64,
-) -> MyResult<String> 
-where T: Read + Seek {
+fn read_bytes_from<T>(reader: &mut T, loc: u64) -> MyResult<String>
+where
+    T: Read + Seek,
+{
     let mut buffer = String::new();
     reader.seek(SeekFrom::Start(loc))?;
     reader.read_to_string(&mut buffer)?;
@@ -92,11 +93,10 @@ where T: Read + Seek {
 
 /// Read the last a few bytes based on the input number (which must not be
 /// positive)
-fn tail_n_bytes<T>(
-    reader: &mut T,
-    loc: i64,
-) -> MyResult<String>
-where T: Read + Seek {
+fn tail_n_bytes<T>(reader: &mut T, loc: i64) -> MyResult<String>
+where
+    T: Read + Seek,
+{
     let mut buffer = String::new();
     reader.seek(SeekFrom::End(loc))?;
     reader.read_to_string(&mut buffer)?;
@@ -105,12 +105,12 @@ where T: Read + Seek {
 }
 
 /// Read lines from the specified location using 0-based indexing
-fn read_lines_from<T>(
-    reader: &mut T,
-    n: usize,
-) -> MyResult<String> 
-where T: BufRead {
-    let lines = reader.lines()
+fn read_lines_from<T>(reader: &mut T, n: usize) -> MyResult<String>
+where
+    T: BufRead,
+{
+    let lines = reader
+        .lines()
         .skip(n)
         .filter_map(|line_or_err| {
             if let Ok(line) = line_or_err {
@@ -126,13 +126,12 @@ where T: BufRead {
 
 /// Read the last N lines. This implementation relies on knowing the total
 /// number of lines and calculating the number of lines to skip
-fn tail_n_lines<T>(
-    reader: &mut T,
-    n: usize,
-) -> MyResult<String> 
-where T: BufRead + Seek {
+fn tail_n_lines<T>(reader: &mut T, n: usize) -> MyResult<String>
+where
+    T: BufRead + Seek,
+{
     let n_lines = reader.lines().count();
-    reader.seek(SeekFrom::Start(0))?;  // reset the reader's position
+    reader.seek(SeekFrom::Start(0))?; // reset the reader's position
     if n > n_lines {
         return read_lines_from(reader, 0);
     } else {
@@ -153,48 +152,48 @@ pub fn run() -> MyResult<i32> {
         Some(offset) => offset,
         None => "10".to_string(),
     };
-    
+
     // If byte_offset is provided, then execute the byte functions
     if let Some(byte_offset) = &args.byte_offset {
         let take_val = TakeValue::parse(byte_offset)?;
         match take_val {
             Start(n) => {
-                args.files.iter().enumerate()
-                    .for_each(|(i, path)| {
-                        match open(path) {
-                            Err(e) => {
-                                eprintln!("{path}: {e}");
-                            },
-                            Ok(mut reader) => {
-                                if !args.quiet && nfiles > 1 {
-                                    println!("==> {path} <==");
-                                }
-                                let tail = read_bytes_from(&mut reader, n as u64).unwrap();
-                                println!("{}", tail);
-                                if i < nfiles - 1 {
-                                    println!("");
-                                }
-                            },
+                args.files
+                    .iter()
+                    .enumerate()
+                    .for_each(|(i, path)| match open(path) {
+                        Err(e) => {
+                            eprintln!("{path}: {e}");
+                        }
+                        Ok(mut reader) => {
+                            if !args.quiet && nfiles > 1 {
+                                println!("==> {path} <==");
+                            }
+                            let tail = read_bytes_from(&mut reader, n as u64).unwrap();
+                            println!("{}", tail);
+                            if i < nfiles - 1 {
+                                println!("");
+                            }
                         }
                     });
-            },
+            }
             Last(n) => {
-                args.files.iter().enumerate()
-                    .for_each(|(i, path)| {
-                        match open(path) {
-                            Err(e) => {
-                                eprintln!("{path}: {e}");
-                            },
-                            Ok(mut reader) => {
-                                if !args.quiet && nfiles > 1 {
-                                    println!("==> {path} <==");
-                                }
-                                let tail = tail_n_bytes(&mut reader, -(n as i64)).unwrap();
-                                println!("{}", tail);
-                                if i < nfiles - 1 {
-                                    println!("");
-                                }
-                            },
+                args.files
+                    .iter()
+                    .enumerate()
+                    .for_each(|(i, path)| match open(path) {
+                        Err(e) => {
+                            eprintln!("{path}: {e}");
+                        }
+                        Ok(mut reader) => {
+                            if !args.quiet && nfiles > 1 {
+                                println!("==> {path} <==");
+                            }
+                            let tail = tail_n_bytes(&mut reader, -(n as i64)).unwrap();
+                            println!("{}", tail);
+                            if i < nfiles - 1 {
+                                println!("");
+                            }
                         }
                     });
             }
@@ -202,42 +201,42 @@ pub fn run() -> MyResult<i32> {
     } else {
         match TakeValue::parse(&lines_offset_str)? {
             Start(n) => {
-                args.files.iter().enumerate()
-                    .for_each(|(i, path)| {
-                        match open(path) {
-                            Err(e) => {
-                                eprintln!("{path}: {e}");
-                            },
-                            Ok(mut reader) => {
-                                if !args.quiet && nfiles > 1 {
-                                    println!("==> {path} <==");
-                                }
-                                let tail = read_lines_from(&mut reader, n).unwrap();
-                                println!("{}", tail);
-                                if i < nfiles - 1 {
-                                    println!("");
-                                }
-                            },
+                args.files
+                    .iter()
+                    .enumerate()
+                    .for_each(|(i, path)| match open(path) {
+                        Err(e) => {
+                            eprintln!("{path}: {e}");
+                        }
+                        Ok(mut reader) => {
+                            if !args.quiet && nfiles > 1 {
+                                println!("==> {path} <==");
+                            }
+                            let tail = read_lines_from(&mut reader, n).unwrap();
+                            println!("{}", tail);
+                            if i < nfiles - 1 {
+                                println!("");
+                            }
                         }
                     });
-            },
+            }
             Last(n) => {
-                args.files.iter().enumerate()
-                    .for_each(|(i, path)| {
-                        match open(path) {
-                            Err(e) => {
-                                eprintln!("{path}: {e}");
-                            },
-                            Ok(mut reader) => {
-                                if !args.quiet && nfiles > 1 {
-                                    println!("==> {path} <==");
-                                }
-                                let tail = tail_n_lines(&mut reader, n).unwrap();
-                                println!("{}", tail);
-                                if i < nfiles - 1 {
-                                    println!("");
-                                }
-                            },
+                args.files
+                    .iter()
+                    .enumerate()
+                    .for_each(|(i, path)| match open(path) {
+                        Err(e) => {
+                            eprintln!("{path}: {e}");
+                        }
+                        Ok(mut reader) => {
+                            if !args.quiet && nfiles > 1 {
+                                println!("==> {path} <==");
+                            }
+                            let tail = tail_n_lines(&mut reader, n).unwrap();
+                            println!("{}", tail);
+                            if i < nfiles - 1 {
+                                println!("");
+                            }
                         }
                     });
             }
@@ -249,8 +248,8 @@ pub fn run() -> MyResult<i32> {
 
 #[cfg(test)]
 mod tests {
-    use std::io::Cursor;
     use super::*;
+    use std::io::Cursor;
 
     #[test]
     fn test_read_bytes_from() {
@@ -275,9 +274,15 @@ mod tests {
     #[test]
     fn test_read_line_froms() {
         let mut cursor = Cursor::new("0\n1\n2\n3\n4\n5\n6\n7\n8\n9\n");
-        assert_eq!(read_lines_from(&mut cursor, 0).unwrap(), "0\n1\n2\n3\n4\n5\n6\n7\n8\n9");
+        assert_eq!(
+            read_lines_from(&mut cursor, 0).unwrap(),
+            "0\n1\n2\n3\n4\n5\n6\n7\n8\n9"
+        );
         cursor.seek(SeekFrom::Start(0)).unwrap();
-        assert_eq!(read_lines_from(&mut cursor, 1).unwrap(), "1\n2\n3\n4\n5\n6\n7\n8\n9");
+        assert_eq!(
+            read_lines_from(&mut cursor, 1).unwrap(),
+            "1\n2\n3\n4\n5\n6\n7\n8\n9"
+        );
         cursor.seek(SeekFrom::Start(0)).unwrap();
         assert_eq!(read_lines_from(&mut cursor, 9).unwrap(), "9");
         cursor.seek(SeekFrom::Start(0)).unwrap();
@@ -291,9 +296,15 @@ mod tests {
         cursor.seek(SeekFrom::Start(0)).unwrap();
         assert_eq!(tail_n_lines(&mut cursor, 1).unwrap(), "9");
         cursor.seek(SeekFrom::Start(0)).unwrap();
-        assert_eq!(tail_n_lines(&mut cursor, 10).unwrap(), "0\n1\n2\n3\n4\n5\n6\n7\n8\n9");
+        assert_eq!(
+            tail_n_lines(&mut cursor, 10).unwrap(),
+            "0\n1\n2\n3\n4\n5\n6\n7\n8\n9"
+        );
         cursor.seek(SeekFrom::Start(0)).unwrap();
-        assert_eq!(tail_n_lines(&mut cursor, 11).unwrap(), "0\n1\n2\n3\n4\n5\n6\n7\n8\n9");
+        assert_eq!(
+            tail_n_lines(&mut cursor, 11).unwrap(),
+            "0\n1\n2\n3\n4\n5\n6\n7\n8\n9"
+        );
     }
 
     #[test]

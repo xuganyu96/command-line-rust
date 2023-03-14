@@ -1,25 +1,25 @@
 //! Data structures and functions used in the implementation of the uniq
+use clap::Parser;
 use std::{
     error::Error,
     fs::File,
-    io::{ self, Write, BufReader, BufRead },
+    io::{self, BufRead, BufReader, Write},
 };
-use clap::Parser;
 
 pub type MyResult<T> = Result<T, Box<dyn Error>>;
 
 /// report or filter out repeated lines in a file
-#[derive(Parser,Debug)]
-#[command(version="0.1.0")]
+#[derive(Parser, Debug)]
+#[command(version = "0.1.0")]
 pub struct Args {
     /// precede each output line with the ocunt of the number of times the
     /// line occurred in the input, followed by a single space
-    #[arg(short='c', long="count")]
+    #[arg(short = 'c', long = "count")]
     count: bool,
 
     /// If input file is a single dash, the standard input is read
     filein: Option<String>,
-    
+
     /// If output file is absent, the standard output is used for output
     fileout: Option<String>,
 }
@@ -28,13 +28,14 @@ pub struct Args {
 /// the empty string or "-" is passed in, then return a reader on stdin
 pub fn open_reader(path: &str) -> MyResult<Box<dyn BufRead>> {
     let reader: Box<dyn BufRead> = match path {
-        "" | "-" => {  // open stdin
+        "" | "-" => {
+            // open stdin
             Box::new(BufReader::new(io::stdin()))
-        },
+        }
         _ => {
             let file = File::open(path)?;
             Box::new(BufReader::new(file))
-        },
+        }
     };
 
     return Ok(reader);
@@ -48,7 +49,7 @@ pub fn open_writer(path: &str) -> MyResult<Box<dyn Write>> {
         _ => {
             let file = File::create(path)?;
             Box::new(file)
-        },
+        }
     };
 
     return Ok(writer);
@@ -69,12 +70,13 @@ fn stream_unique_lines(
 
     while let Ok(bytes_read) = reader.read_line(&mut line) {
         // println!("buffer: '{buffer}', line: '{line}'");
-        if bytes_read == 0 { break; }
+        if bytes_read == 0 {
+            break;
+        }
         if line == buffer {
             // println!("increment counter");
             buffer_cnt += 1;
-        }
-        else {
+        } else {
             // println!("Flushing buffer at cnt={buffer_cnt}");
             if !first_line {
                 bytes_written += flush(writer, &buffer, buffer_cnt, count)?;
@@ -111,7 +113,7 @@ fn flush(
 
 /// The main routine of the uniq program: open the input, read the lines and
 /// write the unique lines to the output
-pub fn run() -> MyResult<()> {
+pub fn run() -> MyResult<i32> {
     let args = Args::try_parse()?;
     let filein = &args.filein.unwrap_or("-".to_string());
     let fileout = &args.fileout.unwrap_or("".to_string());
@@ -119,5 +121,5 @@ pub fn run() -> MyResult<()> {
     let mut writer = open_writer(fileout).map_err(|e| format!("{fileout}: {e}"))?;
     stream_unique_lines(&mut reader, &mut writer, args.count)?;
 
-    return Ok(());
+    return Ok(0);
 }

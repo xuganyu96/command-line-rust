@@ -7,7 +7,7 @@ fn main() {
         Err(e) => {
             eprintln!("wc: {e}");
             process::exit(1);
-        },
+        }
         Ok(exitcode) => {
             process::exit(exitcode);
         }

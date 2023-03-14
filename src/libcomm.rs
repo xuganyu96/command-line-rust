@@ -1,9 +1,9 @@
+use clap::Parser;
 use std::{
     error::Error,
     fs::File,
-    io::{ self, BufRead, BufReader },
+    io::{self, BufRead, BufReader},
 };
-use clap::Parser;
 
 type MyResult<T> = Result<T, Box<dyn Error>>;
 
@@ -40,14 +40,10 @@ impl Column {
             Self::Col1(s) => s.clone(),
             Self::Col2(s) => s.clone(),
             Self::Col3(s) => s.clone(),
-        }
+        };
     }
     /// Convert a single column to String according to the supression config
-    fn to_line(
-        &self,
-        sup1: bool,
-        sup2: bool,
-        sup3: bool,) -> Option<String> {
+    fn to_line(&self, sup1: bool, sup2: bool, sup3: bool) -> Option<String> {
         let prefix = match (self, sup1, sup2) {
             (Self::Col1(_), _, _) => "",
             (Self::Col2(_), false, _) => "\t",
@@ -75,13 +71,13 @@ fn open(path: &str) -> MyResult<Box<dyn BufRead>> {
 }
 
 // TODO should it be "generics with trait" or just Box<dyn BufRead>?
-fn compare<T, U>(
-    reader1: &mut T,
-    reader2: &mut U,
-) -> Vec<Column> 
-where T: BufRead,
-      U: BufRead {
-    let lines1: Vec<String> = reader1.lines()
+fn compare<T, U>(reader1: &mut T, reader2: &mut U) -> Vec<Column>
+where
+    T: BufRead,
+    U: BufRead,
+{
+    let lines1: Vec<String> = reader1
+        .lines()
         .filter_map(|line_or_err| {
             if let Ok(line) = line_or_err {
                 return Some(line);
@@ -89,7 +85,8 @@ where T: BufRead,
             return None;
         })
         .collect();
-    let lines2: Vec<String> = reader2.lines()
+    let lines2: Vec<String> = reader2
+        .lines()
         .filter_map(|line_or_err| {
             if let Ok(line) = line_or_err {
                 return Some(line);
@@ -108,11 +105,11 @@ where T: BufRead,
             (Some(line1), None) => {
                 columns.push(Column::Col1(line1.clone()));
                 i += 1;
-            },
+            }
             (None, Some(line2)) => {
                 columns.push(Column::Col2(line2.clone()));
                 j += 1;
-            },
+            }
             (Some(line1), Some(line2)) => {
                 if line1 == line2 {
                     columns.push(Column::Col3(line1.clone()));
@@ -141,7 +138,8 @@ pub fn run() -> MyResult<i32> {
     let mut reader2 = open(&args.file2)?;
 
     let columns = compare(&mut reader1, &mut reader2);
-    columns.iter()
+    columns
+        .iter()
         .filter_map(|column| column.to_line(args.sup1, args.sup2, args.sup3))
         .for_each(|line| println!("{line}"));
 

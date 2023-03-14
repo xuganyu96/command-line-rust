@@ -9,7 +9,7 @@ use std::io::{self, BufRead, BufReader};
 #[command(version = "0.1.0")]
 #[command(author = "Ganyu Xu <xuganyu@berkeley.edu>")]
 #[command(long_about = None)]
-pub struct Args {
+struct Args {
     /// Number the non-blank lines, start at 1.
     #[arg(short = 'b')]
     nonblank_lines: bool,
@@ -24,7 +24,7 @@ pub struct Args {
 
 /// Open a file or a stdin. If source can be successfully opened, return a
 /// heap-allocated buffer, else return the error
-pub fn open(source: &str) -> Result<Box<dyn BufRead>, Box<dyn Error>> {
+fn open(source: &str) -> Result<Box<dyn BufRead>, Box<dyn Error>> {
     match source {
         "-" => return Ok(Box::new(BufReader::new(io::stdin()))),
         _ => {
@@ -43,7 +43,7 @@ pub fn open(source: &str) -> Result<Box<dyn BufRead>, Box<dyn Error>> {
 
 /// Given a buffer reader, write the content of the buffer reader to the input
 /// buffer. Add line number as necessary
-pub fn write<T: BufRead>(
+fn write<T: BufRead>(
     reader: &mut T,
     buf: &mut String,
     nonblank_lines: bool,
@@ -71,7 +71,7 @@ pub fn write<T: BufRead>(
     return Ok(buflen);
 }
 
-pub fn run() -> Result<(), Box<dyn Error>> {
+pub fn run() -> Result<i32, Box<dyn Error>> {
     let args = Args::try_parse()?;
     let mut buf = String::new();
     for source in args.files.iter() {
@@ -79,5 +79,5 @@ pub fn run() -> Result<(), Box<dyn Error>> {
         let _buflen = write(&mut handle, &mut buf, args.nonblank_lines, args.all_lines);
     }
     print!("{buf}");
-    return Ok(());
+    return Ok(0);
 }

@@ -23,7 +23,7 @@ pub struct Args {
 }
 
 /// The main function to execute
-pub fn run() -> MyResult<()> {
+pub fn run() -> MyResult<i32> {
     let args = Args::try_parse()?;
     let mut files = args.files;
     if files.len() == 0 {
@@ -52,7 +52,7 @@ pub fn run() -> MyResult<()> {
         print!("{buffer}");
     }
 
-    return Ok(());
+    return Ok(0);
 }
 
 /// Return a heap-allocated pointer to a buffered reader that reads from the
