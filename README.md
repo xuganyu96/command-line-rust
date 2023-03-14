@@ -18,6 +18,25 @@ With three chapters remaining (`fortune`, `cal`, and `ls`), I felt sufficiently 
 # Valuable lessons
 - [Exit code pattern](#exit-code-patterns)
 
+## CLI argument parsing using [`clap`](https://docs.rs/clap/latest/clap/)
+While it is possible to directly parse command-line arguments from `std::env::args`, in practice it's wildly impractical and error-prone. In this project, the crate `clap` is used.
+
+In newer versions of `clap`, a "derive" pattern can be used to define CLI parsing scheme through a struct that derives the `Parser` trait. The struct can be instantiated using the `try_parse` method (which is preferred over `parse` since `try_parse` will return error instead of panicking)
+
+```rust
+use clap::Parser;
+
+#[derive(Debug,Parser)]
+struct Args {
+    // ...
+}
+
+pub fn run() -> Result<i32, Box<dyn Error>> {
+    let args = Args::try_parse()?;
+    // ...
+}
+```
+
 ## Exit code patterns
 In UNIX system, the exit code of a program can be used to communicate the final status of a program. By convention, an exit code of `0` indicates that the program finished without any errors, while non-zero exit codes can be used to express a variety of errors.
 
