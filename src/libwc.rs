@@ -21,6 +21,7 @@ type MyResult<T> = Result<T, Box<dyn Error>>;
 ///  specified, a line of cumulative counts for all the files is displayed
 ///  on a separate line after the output for the last file
 #[derive(Parser, Debug)]
+#[command(version, author)]
 struct Arg {
     /// The number of words in each input file is written to the standard
     /// output

@@ -8,8 +8,7 @@ type MyResult<T> = Result<T, Box<dyn Error>>;
 
 /// display first lines of a file
 #[derive(Parser, Debug)]
-#[command(version = "0.1.0")]
-#[command(long_about = None)]
+#[command(version, author)]
 pub struct Args {
     /// Print count lines of each of the specified files
     #[arg(short = 'n', long = "lines", default_value_t = 10)]

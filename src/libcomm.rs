@@ -9,6 +9,7 @@ type MyResult<T> = Result<T, Box<dyn Error>>;
 
 /// select or reject lines common to two files
 #[derive(Debug, Parser)]
+#[command(version, author)]
 struct Args {
     /// Supress printing of column 1
     #[arg(short = '1')]

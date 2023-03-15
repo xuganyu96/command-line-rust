@@ -6,9 +6,7 @@ use clap::Parser;
 
 /// Write arguments to the standard output
 #[derive(Parser, Debug)]
-#[command(version = "0.1.0")]
-#[command(author = "Ganyu Xu <xuganyu@berkeley.edu>")]
-#[command(long_about = None)]
+#[command(version,author)]
 struct Args {
     #[arg(short)]
     no_newline: bool,

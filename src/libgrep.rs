@@ -12,6 +12,7 @@ type MyResult<T> = Result<T, Box<dyn Error>>;
 
 /// file pattern searcher
 #[derive(Debug, Parser)]
+#[command(version, author)]
 struct Args {
     /// Only a count of selected lines is written to standard output
     #[arg(short = 'c')]

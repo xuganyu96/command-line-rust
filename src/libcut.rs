@@ -18,6 +18,7 @@ enum CutRange {
 
 /// cut out selected portions of each line of a file
 #[derive(Parser, Debug)]
+#[command(version, author)]
 struct Args {
     /// the list specifies bytes positions
     #[arg(short = 'b')]

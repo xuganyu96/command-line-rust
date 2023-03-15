@@ -6,9 +6,7 @@ use std::io::{self, BufRead, BufReader};
 
 /// concatenate and print files
 #[derive(Parser, Debug)]
-#[command(version = "0.1.0")]
-#[command(author = "Ganyu Xu <xuganyu@berkeley.edu>")]
-#[command(long_about = None)]
+#[command(version, author)]
 struct Args {
     /// Number the non-blank lines, start at 1.
     #[arg(short = 'b')]

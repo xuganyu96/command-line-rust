@@ -12,6 +12,7 @@ type MyResult<T> = Result<T, Box<dyn Error>>;
 
 /// Display the last part of a file
 #[derive(Debug, Parser)]
+#[command(version, author)]
 struct Args {
     /// The location is this number of lines
     #[arg(short = 'n')]

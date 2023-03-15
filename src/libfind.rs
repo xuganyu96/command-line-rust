@@ -27,7 +27,7 @@ impl EntryType {
 
 /// Walk a file hierarchy
 #[derive(Parser, Debug)]
-#[command(version = "0.1.0")]
+#[command(version, author)]
 struct Args {
     /// True if the file is of the specified type. Possible file types are
     /// f (regular file), l (symlink), d (directory)

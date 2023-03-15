@@ -10,7 +10,7 @@ pub type MyResult<T> = Result<T, Box<dyn Error>>;
 
 /// report or filter out repeated lines in a file
 #[derive(Parser, Debug)]
-#[command(version = "0.1.0")]
+#[command(version, author)]
 pub struct Args {
     /// precede each output line with the ocunt of the number of times the
     /// line occurred in the input, followed by a single space
