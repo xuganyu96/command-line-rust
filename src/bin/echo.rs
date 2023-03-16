@@ -1,7 +1,3 @@
-//! This is a clone of the common "echo" command in UNIX systems, with the
-//! exception that it accepts the "--help" flag (instead of using "man").
-//! Against the instruction of the book, I decided that the positional arg
-//! should be optional to match the behavior of the standard echo
 use clap::Parser;
 
 /// Write arguments to the standard output

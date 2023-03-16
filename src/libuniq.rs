@@ -1,17 +1,15 @@
 //! Data structures and functions used in the implementation of the uniq
+use crate::common::{self, MyResult};
 use clap::Parser;
 use std::{
-    error::Error,
     fs::File,
-    io::{self, BufRead, BufReader, Write},
+    io::{self, BufRead, Write},
 };
-
-pub type MyResult<T> = Result<T, Box<dyn Error>>;
 
 /// report or filter out repeated lines in a file
 #[derive(Parser, Debug)]
 #[command(version, author)]
-pub struct Args {
+struct Args {
     /// precede each output line with the ocunt of the number of times the
     /// line occurred in the input, followed by a single space
     #[arg(short = 'c', long = "count")]
@@ -24,26 +22,9 @@ pub struct Args {
     fileout: Option<String>,
 }
 
-/// Attempt to return a buffered reader on the file path passed in, unless
-/// the empty string or "-" is passed in, then return a reader on stdin
-pub fn open_reader(path: &str) -> MyResult<Box<dyn BufRead>> {
-    let reader: Box<dyn BufRead> = match path {
-        "" | "-" => {
-            // open stdin
-            Box::new(BufReader::new(io::stdin()))
-        }
-        _ => {
-            let file = File::open(path)?;
-            Box::new(BufReader::new(file))
-        }
-    };
-
-    return Ok(reader);
-}
-
 /// Attempt to return a writer on the file path passed in, unless the empty
 /// string is passed in, then return a writer on stdout
-pub fn open_writer(path: &str) -> MyResult<Box<dyn Write>> {
+fn open_writer(path: &str) -> MyResult<Box<dyn Write>> {
     let writer: Box<dyn Write> = match path {
         "" => Box::new(io::stdout()),
         _ => {
@@ -117,7 +98,7 @@ pub fn run() -> MyResult<i32> {
     let args = Args::try_parse()?;
     let filein = &args.filein.unwrap_or("-".to_string());
     let fileout = &args.fileout.unwrap_or("".to_string());
-    let mut reader = open_reader(filein).map_err(|e| format!("{filein}: {e}"))?;
+    let mut reader = common::open(filein).map_err(|e| format!("{filein}: {e}"))?;
     let mut writer = open_writer(fileout).map_err(|e| format!("{fileout}: {e}"))?;
     stream_unique_lines(&mut reader, &mut writer, args.count)?;
 

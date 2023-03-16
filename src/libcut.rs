@@ -1,13 +1,11 @@
+use crate::common::{self, MyResult};
 use clap::Parser;
 use std::{
     error::Error,
     fmt::{self, Display, Formatter},
-    fs::File,
-    io::{self, BufRead, BufReader},
+    io::BufRead,
     ops::Range,
 };
-
-type MyResult<T> = Result<T, Box<dyn Error>>;
 
 /// Encapsulation of the (mutually exclusive) three possible types of ranges
 enum CutRange {
@@ -87,14 +85,6 @@ fn parse_range(input: &str) -> MyResult<Range<usize>> {
             }
             return Ok((start - 1)..end);
         }
-    }
-}
-
-/// Attempt to open the the file or stdin
-fn open(path: &str) -> MyResult<Box<dyn BufRead>> {
-    match path {
-        "" | "-" => Ok(Box::new(BufReader::new(io::stdin()))),
-        _ => Ok(Box::new(BufReader::new(File::open(path)?))),
     }
 }
 
@@ -212,7 +202,7 @@ pub fn run() -> MyResult<i32> {
 
     args.files
         .iter()
-        .map(|path| open(path))
+        .map(|path| common::open(path))
         .map(|reader_or_err| reader_or_err.map(|reader| cut_reader(reader, &ranges)))
         .for_each(|lines_or_err| match lines_or_err {
             Ok(lines) => lines.iter().for_each(|line| println!("{line}")),

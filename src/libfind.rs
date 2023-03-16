@@ -1,9 +1,7 @@
+use crate::common::MyResult;
 use clap::{Parser, ValueEnum};
 use regex::Regex;
-use std::error::Error;
 use walkdir::{DirEntry, WalkDir};
-
-type MyResult<T> = Result<T, Box<dyn Error>>;
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum)]
 enum EntryType {

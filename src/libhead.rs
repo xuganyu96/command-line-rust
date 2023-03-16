@@ -1,10 +1,7 @@
 //! Functions and data structures that help with the implementatino of "head"
+use crate::common::{self, MyResult};
 use clap::Parser;
-use std::error::Error;
-use std::fs::File;
-use std::io::{self, BufRead, BufReader};
-
-type MyResult<T> = Result<T, Box<dyn Error>>;
+use std::io::BufRead;
 
 /// display first lines of a file
 #[derive(Parser, Debug)]
@@ -30,7 +27,7 @@ pub fn run() -> MyResult<i32> {
     }
 
     for (i, file) in files.iter().enumerate() {
-        let mut buf_reader = open(&file)?;
+        let mut buf_reader = common::open(&file)?;
         let mut buffer = String::new();
         if let Some(bytes_count) = args.bytes_count {
             read_bytes(&mut buf_reader, &mut buffer, bytes_count)?;
@@ -52,23 +49,6 @@ pub fn run() -> MyResult<i32> {
     }
 
     return Ok(0);
-}
-
-/// Return a heap-allocated pointer to a buffered reader that reads from the
-/// input path. If the input path is non-empty, then it is assumed to be a
-/// file path. If the input path is empty, then the reader will read from
-/// stdin
-fn open(path: &str) -> MyResult<Box<dyn BufRead>> {
-    return match path {
-        "" => Ok(Box::new(BufReader::new(io::stdin()))),
-        _ => match File::open(path) {
-            Ok(handle) => Ok(Box::new(BufReader::new(handle))),
-            Err(e) => {
-                let msg = format!("{path}: {}", e.to_string());
-                Err(Box::new(io::Error::new(e.kind(), msg)))
-            }
-        },
-    };
 }
 
 /// Given a buffered reader, append the specified number of lines to the input

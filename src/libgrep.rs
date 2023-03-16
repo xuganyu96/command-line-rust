@@ -1,14 +1,9 @@
 //! Routines and helper functions used for supporting grep
+use crate::common::{self, MyResult};
 use clap::Parser;
 use regex::{Regex, RegexBuilder};
-use std::{
-    error::Error,
-    fs::{self, File},
-    io::{self, BufRead, BufReader},
-};
+use std::{fs, io::BufRead};
 use walkdir::{DirEntry, WalkDir};
-
-type MyResult<T> = Result<T, Box<dyn Error>>;
 
 /// file pattern searcher
 #[derive(Debug, Parser)]
@@ -55,14 +50,6 @@ fn match_filter_reader(reader: Box<dyn BufRead>, pattern: &Regex, invert: bool) 
         .collect::<Vec<String>>();
 }
 
-/// Open a file or stdin and propagate the error
-fn open(path: &str) -> MyResult<Box<dyn BufRead>> {
-    return match path {
-        "" | "-" => Ok(Box::new(BufReader::new(io::stdin()))),
-        _ => Ok(Box::new(BufReader::new(File::open(path)?))),
-    };
-}
-
 /// Given a list of paths and the "recursive" flag, return a vector of
 /// DirEntry that are files to be parsed. If recursive is true, then all files
 /// will be recursively included. Otherwise, top level directories will not be
@@ -103,7 +90,7 @@ fn walk_paths(paths: &[String], recursive: bool) -> Vec<DirEntry> {
 }
 
 /// The main routine of the grep program
-pub fn run() -> Result<i32, Box<dyn Error>> {
+pub fn run() -> MyResult<i32> {
     let args = Args::try_parse()?;
     let pattern = RegexBuilder::new(&args.pattern)
         .case_insensitive(args.ignore_case)
@@ -114,7 +101,7 @@ pub fn run() -> Result<i32, Box<dyn Error>> {
 
     for entry in dir_entries.iter() {
         let path = entry.path().to_string_lossy().to_string();
-        let reader = open(&path).map_err(|e| format!("{path}: {e}"))?;
+        let reader = common::open(&path).map_err(|e| format!("{path}: {e}"))?;
         let lines = match_filter_reader(reader, &pattern, args.invert_match);
         match_count += lines.len();
         if args.count {

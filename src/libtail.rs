@@ -1,4 +1,5 @@
 //! Library for the tail program
+use crate::common::MyResult;
 use clap::Parser;
 use regex::Regex;
 use std::{
@@ -7,8 +8,6 @@ use std::{
     fs::File,
     io::{BufRead, BufReader, Read, Seek, SeekFrom},
 };
-
-type MyResult<T> = Result<T, Box<dyn Error>>;
 
 /// Display the last part of a file
 #[derive(Debug, Parser)]
@@ -140,7 +139,8 @@ where
     }
 }
 
-/// Open a file
+/// Open a file. Note that common::open does not apply here because stdin
+/// cannot be sought and thus does not satisfy the "Seek" trait
 fn open(path: &str) -> MyResult<BufReader<File>> {
     let file = File::open(path)?;
     return Ok(BufReader::new(file));

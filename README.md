@@ -4,8 +4,9 @@
 With three chapters remaining (`fortune`, `cal`, and `ls`), I felt sufficiently bored of the content and would like to move on. However, leaving all the efforts that went into this set of mini projects behind without proper review makes me weary that I will forget the valuable lessons I learned from the past ten weeks of grind. Therefore, for the remainder of March while I also need to deal with tax return, I will be re-reading the first ten chapters and consolidate my learnings into one or more blog posts, as well as a cheat sheet on this repository.
 
 1. `true`, `false` (reviewed)
-1. `echo`
-1. `cat`
+1. `echo` (reviewed)
+1. `cat` (in progress)
+    - [ ] `BufRead` common functions: `read_line`, `lines`, etc.
 1. `head`
 1. `wc`
 1. `uniq`
@@ -16,6 +17,7 @@ With three chapters remaining (`fortune`, `cal`, and `ls`), I felt sufficiently 
 1. `tail`
 
 # Valuable lessons
+- [Project organization](#project-organization)
 - [CLI Argument aprsing](#cli-argument-parsing-using-clap)
     - [Helpful information](#helpful-information)
     - [Keyword arguments](#keyword-arguments)
@@ -23,6 +25,41 @@ With three chapters remaining (`fortune`, `cal`, and `ls`), I felt sufficiently 
     - [Optional argument](#optional-argument)
     - [Mutually exclusive arguments](#mutually-exclusive-arguments)
 - [Exit code pattern](#exit-code-patterns)
+
+## Error handling
+How to create a new error? Convert error into `Box<dyn Error>`?
+
+## Project organization
+For all but the most straightforward programs, it makes sense that the source code is divided between the binary and the library, where the binary simply invokes the functions in the library module, including the main routine that is conventionally named `run`.
+
+Foreseeing the number of binaries and libraries, I chose to organize the project as follows:
+
+1. Each binary is stored under `src/bin/program.rs`
+2. Functions common to all programs are stored under `src/lib.rs` in a `common` module
+3. Functions unique to individual programs are stored in individual `src/libxxx.rs` modules and referenced in `src/lib.rs`
+
+For example, one function that almost shows up in every program starting with `cat` is `open`, which takes a path and returns a buffered reader that points to either a file or `stdin` depending on the input:
+
+```rust
+/// Open a file or a stdin and return a buffered reader against it
+/// Upon encountering error, the error will be pre-pended with the path
+pub fn open(path: &str) -> MyResult<Box<dyn BufRead>> {
+    let reader: Box<dyn BufRead> = match path {
+        "" | "-" => {
+            Box::new(BufReader::new(io::stdin()))
+        },
+        _ => {
+            let file = File::open(path)
+                .map_err(|e| format!("{path}: {e}"))?;
+            Box::new(BufReader::new(file))
+        },
+    };
+
+    return Ok(reader);
+}
+```
+
+Note that for importing modules and components within the library modules, we need to import using `crate::xxx`; on the other hand, we need to use `packagename::xxx` to import components into the binary ([reference](https://users.rust-lang.org/t/use-crate-x-vs-use-packagename-x/44122)).
 
 ## CLI argument parsing using [`clap`](https://docs.rs/clap/latest/clap/)
 While it is possible to directly parse command-line arguments from `std::env::args`, in practice it's wildly impractical and error-prone. In this project, the crate `clap` is used.

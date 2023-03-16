@@ -1,8 +1,7 @@
 //! Library of data structures and functions used for "cat"
+use crate::common::{self, MyResult};
 use clap::Parser;
-use std::error::Error;
-use std::fs::File;
-use std::io::{self, BufRead, BufReader};
+use std::io::BufRead;
 
 /// concatenate and print files
 #[derive(Parser, Debug)]
@@ -20,25 +19,6 @@ struct Args {
     files: Vec<String>,
 }
 
-/// Open a file or a stdin. If source can be successfully opened, return a
-/// heap-allocated buffer, else return the error
-fn open(source: &str) -> Result<Box<dyn BufRead>, Box<dyn Error>> {
-    match source {
-        "-" => return Ok(Box::new(BufReader::new(io::stdin()))),
-        _ => {
-            let handle = File::open(source);
-            return match handle {
-                Ok(file_handle) => Ok(Box::new(BufReader::new(file_handle))),
-                Err(e) => {
-                    let errmsg = e.to_string();
-                    let errmsg = format!("{source}: {errmsg}");
-                    Err(Box::new(io::Error::new(e.kind(), errmsg)))
-                }
-            };
-        }
-    }
-}
-
 /// Given a buffer reader, write the content of the buffer reader to the input
 /// buffer. Add line number as necessary
 fn write<T: BufRead>(
@@ -46,7 +26,7 @@ fn write<T: BufRead>(
     buf: &mut String,
     nonblank_lines: bool,
     all_lines: bool,
-) -> Result<usize, Box<dyn Error>> {
+) -> MyResult<usize> {
     let mut line_no = 0;
     let mut line = String::new();
     let mut buflen = 0;
@@ -69,11 +49,11 @@ fn write<T: BufRead>(
     return Ok(buflen);
 }
 
-pub fn run() -> Result<i32, Box<dyn Error>> {
+pub fn run() -> MyResult<i32> {
     let args = Args::try_parse()?;
     let mut buf = String::new();
     for source in args.files.iter() {
-        let mut handle = open(source)?;
+        let mut handle = common::open(source)?;
         let _buflen = write(&mut handle, &mut buf, args.nonblank_lines, args.all_lines);
     }
     print!("{buf}");

@@ -1,11 +1,6 @@
+use crate::common::{self, MyResult};
 use clap::Parser;
-use std::{
-    error::Error,
-    fs::File,
-    io::{self, BufRead, BufReader},
-};
-
-type MyResult<T> = Result<T, Box<dyn Error>>;
+use std::io::BufRead;
 
 /// select or reject lines common to two files
 #[derive(Debug, Parser)]
@@ -61,14 +56,6 @@ impl Column {
             _ => Some(format!("{prefix}{}", self.to_string())),
         };
     }
-}
-
-/// Return a reader on a file
-fn open(path: &str) -> MyResult<Box<dyn BufRead>> {
-    return match path {
-        "" | "-" => Ok(Box::new(BufReader::new(io::stdin()))),
-        _ => Ok(Box::new(BufReader::new(File::open(path)?))),
-    };
 }
 
 // TODO should it be "generics with trait" or just Box<dyn BufRead>?
@@ -135,8 +122,8 @@ pub fn run() -> MyResult<i32> {
     if &args.file1 == "-" && &args.file2 == "-" {
         return Err("Two files cannot both be stdin".into());
     }
-    let mut reader1 = open(&args.file1)?;
-    let mut reader2 = open(&args.file2)?;
+    let mut reader1 = common::open(&args.file1)?;
+    let mut reader2 = common::open(&args.file2)?;
 
     let columns = compare(&mut reader1, &mut reader2);
     columns

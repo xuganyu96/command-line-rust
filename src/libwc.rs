@@ -1,9 +1,8 @@
+use crate::common::{self, MyResult};
 use clap::Parser;
 use std::error::Error;
 use std::fs::File;
 use std::io::{self, BufRead, BufReader};
-
-type MyResult<T> = Result<T, Box<dyn Error>>;
 
 ///  word, line, character, and byte count
 ///
@@ -147,22 +146,6 @@ impl WordCountInfo {
     }
 }
 
-/// Given a path, return a buffered reader on the file. If the path is empty,
-/// return a buffered reader on stdin
-fn open(path: &str) -> MyResult<Box<dyn BufRead>> {
-    return match path {
-        "" => Ok(Box::new(BufReader::new(io::stdin()))),
-        _ => {
-            let handle = File::open(path);
-            if let Err(e) = handle {
-                let msg = format!("{path}: {}", e.to_string());
-                return Err(Box::new(io::Error::new(e.kind(), msg)));
-            }
-            return Ok(Box::new(BufReader::new(handle.unwrap())));
-        }
-    };
-}
-
 /// Parse the arguments, count the words, then print to output
 pub fn run() -> MyResult<i32> {
     let mut exitcode = 0;
@@ -180,7 +163,7 @@ pub fn run() -> MyResult<i32> {
     let mut output_lines = vec![];
 
     for file in args.files.iter() {
-        match open(&file) {
+        match common::open(&file) {
             Ok(mut reader) => {
                 let wc = WordCountInfo::from_read(&file, &mut reader)?;
                 output_lines.push(wc.to_string(count_lines, count_words, count_bytes, count_chars));
