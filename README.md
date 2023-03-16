@@ -18,7 +18,7 @@ With three chapters remaining (`fortune`, `cal`, and `ls`), I felt sufficiently 
 
 # Valuable lessons
 - [Project organization](#project-organization)
-- [CLI Argument aprsing](#cli-argument-parsing-using-clap)
+- [CLI Argument parsing](#cli-argument-parsing-using-clap)
     - [Helpful information](#helpful-information)
     - [Keyword arguments](#keyword-arguments)
     - [Parsing non-string type](#parsing-non-string-type)
