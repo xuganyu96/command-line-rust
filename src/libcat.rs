@@ -19,43 +19,31 @@ struct Args {
     files: Vec<String>,
 }
 
-/// Given a buffer reader, write the content of the buffer reader to the input
-/// buffer. Add line number as necessary
-fn write<T: BufRead>(
-    reader: &mut T,
-    buf: &mut String,
-    nonblank_lines: bool,
-    all_lines: bool,
-) -> MyResult<usize> {
+/// Given a reader, print the lines to stdout. If count_nonblank or count_all
+/// prepend the line number appropriately
+fn cat<T: BufRead>(reader: &mut T, count_nonblank: bool, count_all: bool) -> MyResult<()> {
     let mut line_no = 0;
-    let mut line = String::new();
-    let mut buflen = 0;
-    while let Ok(linelen) = reader.read_line(&mut line) {
-        if linelen == 0 {
-            break;
-        }
-        if (nonblank_lines && line != "\n") || all_lines {
-            let expanded_line = format!("{:>6}\t{}", line_no + 1, line);
-            buf.push_str(&expanded_line);
-            line.clear();
-            line_no += 1;
-            buflen += linelen;
-        } else {
-            buf.push_str(&line);
-            line.clear();
-            buflen += linelen;
-        }
-    }
-    return Ok(buflen);
+
+    reader
+        .lines()
+        .filter_map(|line_or_err| line_or_err.map_or(None, |line| Some(line)))
+        .map(|line| {
+            if (count_nonblank && line.len() != 0) || count_all {
+                line_no += 1;
+                return format!("{:>6}\t{}", line_no, line);
+            }
+            return line;
+        })
+        .for_each(|line| println!("{line}"));
+
+    return Ok(());
 }
 
 pub fn run() -> MyResult<i32> {
     let args = Args::try_parse()?;
-    let mut buf = String::new();
     for source in args.files.iter() {
         let mut handle = common::open(source)?;
-        let _buflen = write(&mut handle, &mut buf, args.nonblank_lines, args.all_lines);
+        cat(&mut handle, args.nonblank_lines, args.all_lines)?;
     }
-    print!("{buf}");
     return Ok(0);
 }

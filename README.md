@@ -6,7 +6,8 @@ With three chapters remaining (`fortune`, `cal`, and `ls`), I felt sufficiently 
 1. `true`, `false` (reviewed)
 1. `echo` (reviewed)
 1. `cat` (in progress)
-    - [ ] `BufRead` common functions: `read_line`, `lines`, etc.
+    - [x] `BufRead` common functions: `read_line`, `lines`, etc.
+    - [ ] Integration testing using `assert_cmd` and `predicates`
 1. `head`
 1. `wc`
 1. `uniq`
@@ -17,49 +18,52 @@ With three chapters remaining (`fortune`, `cal`, and `ls`), I felt sufficiently 
 1. `tail`
 
 # Valuable lessons
-- [Project organization](#project-organization)
+- [Exit code pattern](#exit-code-patterns)
 - [CLI Argument parsing](#cli-argument-parsing-using-clap)
     - [Helpful information](#helpful-information)
     - [Keyword arguments](#keyword-arguments)
     - [Parsing non-string type](#parsing-non-string-type)
     - [Optional argument](#optional-argument)
     - [Mutually exclusive arguments](#mutually-exclusive-arguments)
-- [Exit code pattern](#exit-code-patterns)
+- [Project organization](#project-organization)
+- [Iterating over lines](#iterating-over-lines-using-bufread)
 
-## Error handling
-How to create a new error? Convert error into `Box<dyn Error>`?
+## Exit code patterns
+In UNIX system, the exit code of a program can be used to communicate the final status of a program. By convention, an exit code of `0` indicates that the program finished without any errors, while non-zero exit codes can be used to express a variety of errors.
 
-## Project organization
-For all but the most straightforward programs, it makes sense that the source code is divided between the binary and the library, where the binary simply invokes the functions in the library module, including the main routine that is conventionally named `run`.
-
-Foreseeing the number of binaries and libraries, I chose to organize the project as follows:
-
-1. Each binary is stored under `src/bin/program.rs`
-2. Functions common to all programs are stored under `src/lib.rs` in a `common` module
-3. Functions unique to individual programs are stored in individual `src/libxxx.rs` modules and referenced in `src/lib.rs`
-
-For example, one function that almost shows up in every program starting with `cat` is `open`, which takes a path and returns a buffered reader that points to either a file or `stdin` depending on the input:
+A common pattern in all except for the most fundamental programs (`true`, `false`, and `echo`) is to let the library's `run` function return a `Result` struct and use the variants to decide which exit code to run with:
 
 ```rust
-/// Open a file or a stdin and return a buffered reader against it
-/// Upon encountering error, the error will be pre-pended with the path
-pub fn open(path: &str) -> MyResult<Box<dyn BufRead>> {
-    let reader: Box<dyn BufRead> = match path {
-        "" | "-" => {
-            Box::new(BufReader::new(io::stdin()))
-        },
-        _ => {
-            let file = File::open(path)
-                .map_err(|e| format!("{path}: {e}"))?;
-            Box::new(BufReader::new(file))
-        },
-    };
+use std::process;
+use crate::libtail;
 
-    return Ok(reader);
+fn main() {
+    if let Err(e) = libtail::run() {
+        eprintln!("tail: {e}")
+        process::exit(1);
+    }
+    process::exit(0);  // kind of redundant
+```
+
+I personally found this pattern to be insufficient since it requires that the `run` function to return some `Err` for the program to exit with a non-zero exit code, which is not always the elegant thing to do. For example, when the program reads through multiple files (such as `head`, `tail`, `cat`, etc.), even if some of the files fail to open, the program will still apply its logic to the other files, but the exit code will be non-zero.
+
+My solution to this is to set the return `Result` type to encapsulate an `i32` as the exit code in its `Ok` variant:
+
+```rust
+use std::process;
+use crate::libtail;
+
+fn main() {
+    match libtail::run() {
+        Ok(exit_code) => process::exit(exit_code),
+        Err(e) => {
+            eprintln!("tail: {e}");
+            process::exit(1);
+        }
+    }
 }
 ```
 
-Note that for importing modules and components within the library modules, we need to import using `crate::xxx`; on the other hand, we need to use `packagename::xxx` to import components into the binary ([reference](https://users.rust-lang.org/t/use-crate-x-vs-use-packagename-x/44122)).
 
 ## CLI argument parsing using [`clap`](https://docs.rs/clap/latest/clap/)
 While it is possible to directly parse command-line arguments from `std::env::args`, in practice it's wildly impractical and error-prone. In this project, the crate `clap` is used.
@@ -135,38 +139,123 @@ For anything other than the simplest default value, I personally recommend using
 ### Mutually exclusive arguments
 Some keyword arguments are mutually exclusive (e.g. see the `bytes` and `chars` flags in [wc](./src/libwc.rs)). Mutual exclusivity is specified using `#[arg(conflicts_with("variable_name")]`
 
-## Exit code patterns
-In UNIX system, the exit code of a program can be used to communicate the final status of a program. By convention, an exit code of `0` indicates that the program finished without any errors, while non-zero exit codes can be used to express a variety of errors.
+## Project organization
+For all but the most straightforward programs, it makes sense that the source code is divided between the binary and the library, where the binary simply invokes the functions in the library module, including the main routine that is conventionally named `run`.
 
-A common pattern in all except for the most fundamental programs (`true`, `false`, and `echo`) is to let the library's `run` function return a `Result` struct and use the variants to decide which exit code to run with:
+Foreseeing the number of binaries and libraries, I chose to organize the project as follows:
+
+1. Each binary is stored under `src/bin/program.rs`
+2. Functions common to all programs are stored under `src/lib.rs` in a `common` module
+3. Functions unique to individual programs are stored in individual `src/libxxx.rs` modules and referenced in `src/lib.rs`
+
+For example, one function that almost shows up in every program starting with `cat` is `open`, which takes a path and returns a buffered reader that points to either a file or `stdin` depending on the input:
 
 ```rust
-use std::process;
-use crate::libtail;
+/// Open a file or a stdin and return a buffered reader against it
+/// Upon encountering error, the error will be pre-pended with the path
+pub fn open(path: &str) -> MyResult<Box<dyn BufRead>> {
+    let reader: Box<dyn BufRead> = match path {
+        "" | "-" => {
+            Box::new(BufReader::new(io::stdin()))
+        },
+        _ => {
+            let file = File::open(path)
+                .map_err(|e| format!("{path}: {e}"))?;
+            Box::new(BufReader::new(file))
+        },
+    };
 
-fn main() {
-    if let Err(e) = libtail::run() {
-        eprintln!("tail: {e}")
-        process::exit(1);
-    }
-    process::exit(0);  // kind of redundant
+    return Ok(reader);
+}
 ```
 
-I personally found this pattern to be insufficient since it requires that the `run` function to return some `Err` for the program to exit with a non-zero exit code, which is not always the elegant thing to do. For example, when the program reads through multiple files (such as `head`, `tail`, `cat`, etc.), even if some of the files fail to open, the program will still apply its logic to the other files, but the exit code will be non-zero.
+Note that for importing modules and components within the library modules, we need to import using `crate::xxx`; on the other hand, we need to use `packagename::xxx` to import components into the binary ([reference](https://users.rust-lang.org/t/use-crate-x-vs-use-packagename-x/44122)).
 
-My solution to this is to set the return `Result` type to encapsulate an `i32` as the exit code in its `Ok` variant:
+
+## Iterating over lines using `BufRead`
+The `BufReader` struct and the `BufRead` trait are common recurrences in the programs of this project for interacting with `STDIN` and files.
+
+First, note that many functions are not available in `BufReader` alone; instead, the `BufRead` trait must be brought into scope before functions like `lines()` and `read_lines()` become available to the `BufReader` object.
+
+When implementing `cat`, I choose to implement a function that reads from the input (`stdin` or file) line by line so as to keep count of the appropriate line number depending on whether I am counting all lines or non-empty lines. My first implementation uses the `read_line` method from the `BufRead` trait, which required the input of a buffer:
 
 ```rust
-use std::process;
-use crate::libtail;
+/// An implementation of "cat" with C-style read_line
+fn cat<T: BufRead>(
+    reader: &mut T,
+    ...
+) -> MyResult<String> {
+    let mut buf = String::new();
 
-fn main() {
-    match libtail::run() {
-        Ok(exit_code) => process::exit(exit_code),
-        Err(e) => {
-            eprintln!("tail: {e}");
-            process::exit(1);
-        }
+    while let Ok(nbytes) = reader.read_line(&mut buf) {
+        if nbytes == 0 { break; }
+        
+        // cat logic ...
     }
+
+    // return
 }
+```
+
+We can further simplify the implementation using the `lines()` function, which returns an iterator over the lines `Iterator<Item = Result<String, ...>>`.
+
+```rust
+fn cat<T: BufRead>(
+    reader: &mut T,
+    count_nonblank: bool,
+    count_all: bool,
+) -> MyResult<()> {
+    let mut line_no = 0;
+
+   for line in reader.lines() {
+       let line = line?;  // why I don't use iterators
+       if (count_nonblank && line.len() != 0) || count_all {
+           println!("{:>6}\t{}", line_no + 1, line);
+           line_no += 1;
+       } else {
+           println!("{line}");
+       }
+   }
+
+    return Ok(());
+}
+```
+
+Finally, we can convert the for loop into functional-style code using closures:
+
+```rust
+fn cat<T: BufRead>(
+    reader: &mut T,
+    count_nonblank: bool,
+    count_all: bool,
+) -> MyResult<()> {
+    let mut line_no = 0;
+
+    reader.lines()
+        .filter_map(|line_or_err| line_or_err.map_or(None, |line| Some(line)))
+        .map(|line| {
+            if (count_nonblank && line.len() != 0) || count_all {
+                line_no += 1;
+                return format!("{:>6}\t{}", line_no, line);
+            }
+            return line;
+        })
+        .for_each(|line| println!("{line}"));
+
+    return Ok(());
+}
+```
+
+Another minor detail to note are the various syntaxes to declare the functions:
+
+```rust
+/// For specifying a simple trait, do it at the function name:
+fn cat<T: BufRead>(reader: &mut T) -> MyResult<()> {}
+
+/// For specifying combinations of trait, use a "where" claus:
+fn tail<T>(reader: &mut T) -> MyResult<()>
+where T: Read + Seek {}
+
+/// TODO: I am not sure if it makes sense to move the reader object
+fn cat<T>(mut reader: T) -> MyResult<()> {}
 ```
