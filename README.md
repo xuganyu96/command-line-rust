@@ -28,6 +28,28 @@ With three chapters remaining (`fortune`, `cal`, and `ls`), I felt sufficiently 
 - [Project organization](#project-organization)
 - [Iterating over lines](#iterating-over-lines-using-bufread)
 
+## Integration testing
+In this project, integration testing is used to validate the behavior of the various programs from the user's perspective. This means compiling the binaries, then write the tests to run those binaries as if we don't know what went into those binaries. This style of testing is a contrast against unit tests, which validate the behavior of the lowest-level building blocks of each program, such as indiviudal structs and functions.
+
+Rust's `std::process` library contains a `Command` struct that can be used to make system calls and capture outputs. Here is an example
+
+```rust
+/// Run the system "cat" against a file that does not exist
+#[test]
+fn test_syscall() {
+    let output = Command::new("cat")
+    .args(&["does-not-exist"])
+    .output()?;
+
+    assert_eq!(&output.stdout, "".as_bytes());
+    let stderr_str = String::from_utf8(output.stderr)?;
+    assert!(stderr_str.contains("No such file or directory"));
+    return Ok(());
+}
+```
+
+However, the crate `assert_cmd` provides a 
+
 ## Exit code patterns
 In UNIX system, the exit code of a program can be used to communicate the final status of a program. By convention, an exit code of `0` indicates that the program finished without any errors, while non-zero exit codes can be used to express a variety of errors.
 
