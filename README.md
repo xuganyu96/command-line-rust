@@ -31,6 +31,10 @@ With three chapters remaining (`fortune`, `cal`, and `ls`), I felt sufficiently 
 ## Integration testing
 In this project, integration testing is used to validate the behavior of the various programs from the user's perspective. This means compiling the binaries, then write the tests to run those binaries as if we don't know what went into those binaries. This style of testing is a contrast against unit tests, which validate the behavior of the lowest-level building blocks of each program, such as indiviudal structs and functions.
 
+## Test functions
+Each test is a function that has the `#[test]` attribute. Tests can be written using macros like `assert!` and `assert_eq!` so that a test passes if and only if it does not panick. Tests can also be written to return a `Result<T, E>` where `Ok` means the test passes while `Err` means the test fails.
+
+## Running binaries with code
 Rust's `std::process` library contains a `Command` struct that can be used to make system calls and capture outputs. Here is an example
 
 ```rust
@@ -48,7 +52,36 @@ fn test_syscall() {
 }
 ```
 
-However, the crate `assert_cmd` provides a 
+However, the crate `assert_cmd` provides a more streamlined experience of calling system binaries and cargo binaries (without needing to modify `$PATH`), as well as interfaces that make testing `stdout` and `stderr` much easier and straightforward. The same test above can be refactored into the one below using the `assert_cmd::Command` struct
+
+```rust
+#[test]
+fn test_command() -> TestResult<()> {
+    Command::new("cat")
+        .args(&["does-not-exist"])
+        .assert()
+        .try_failure()?
+        .try_stdout("")?
+        .try_stderr("cat: does-not-exist: No such file or directory\n")?;
+    return Ok(());
+}
+```
+
+`assert_cmd` can be used in conjunction with the `predicate` crate to make test conditions more flexible, such as with `try_stdout` and `try_stderr`.
+
+```rust
+#[test]
+fn test_command() -> TestResult<()> {
+    Command::new("cat")
+        .args(&["does-not-exist"])
+        .assert()
+        .try_failure()?
+        .try_stdout("")?
+        .try_stderr(contains("No such file or directory"))?;
+
+    return Ok(());
+}
+```
 
 ## Exit code patterns
 In UNIX system, the exit code of a program can be used to communicate the final status of a program. By convention, an exit code of `0` indicates that the program finished without any errors, while non-zero exit codes can be used to express a variety of errors.
