@@ -7,7 +7,7 @@ With three chapters remaining (`fortune`, `cal`, and `ls`), I felt sufficiently 
 1. `echo` (reviewed)
 1. `cat` (in progress)
     - [x] `BufRead` common functions: `read_line`, `lines`, etc.
-    - [ ] Integration testing using `assert_cmd` and `predicates`
+    - [x] Integration testing using `assert_cmd` and `predicates`
 1. `head`
 1. `wc`
 1. `uniq`
