@@ -26,10 +26,12 @@ pub fn run() -> MyResult<i32> {
         files.push("".to_string());
     }
     let header = files.len() > 1;
-    
+
     let mut exit_code = 0;
-    let heads = files.iter()
-        .filter_map(|path| {  // map path to reader
+    let heads = files
+        .iter()
+        .filter_map(|path| {
+            // map path to reader
             return match common::open(path) {
                 Ok(reader) => Some((path, reader)),
                 Err(e) => {
@@ -39,7 +41,8 @@ pub fn run() -> MyResult<i32> {
                 }
             };
         })
-        .filter_map(|(path, reader)| {  // map reader to heads
+        .filter_map(|(path, reader)| {
+            // map reader to heads
             let head = match args.bytes_count {
                 Some(num) => read_bytes(reader, num),
                 None => read_lines(reader, args.line_count),
@@ -49,7 +52,8 @@ pub fn run() -> MyResult<i32> {
             }
             return None;
         })
-        .map(|(path, head)| { // attach head if necessary
+        .map(|(path, head)| {
+            // attach head if necessary
             if header {
                 let mut header_str = format!("==> {path} <==\n");
                 header_str.push_str(&head);
@@ -66,7 +70,8 @@ pub fn run() -> MyResult<i32> {
 
 /// Return (up to) the first a few lines of the given reader
 fn read_lines<T: BufRead>(reader: T, num: usize) -> MyResult<String> {
-    let mut lines = reader.lines()
+    let mut lines = reader
+        .lines()
         .take(num)
         .filter_map(|line_or_err| {
             if let Ok(line) = line_or_err {
@@ -85,7 +90,8 @@ fn read_lines<T: BufRead>(reader: T, num: usize) -> MyResult<String> {
 /// Return (up to) the first a few bytes from the given reader as a (possibly)
 /// lossy String
 fn read_bytes<T: BufRead>(reader: T, num: usize) -> MyResult<String> {
-    let bytes = reader.bytes()
+    let bytes = reader
+        .bytes()
         .take(num)
         .filter_map(|byte_or_err| {
             if let Ok(byte) = byte_or_err {
