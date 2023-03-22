@@ -5,10 +5,10 @@ With three chapters remaining (`fortune`, `cal`, and `ls`), I felt sufficiently 
 
 1. `true`, `false` (reviewed)
 1. `echo` (reviewed)
-1. `cat` (in progress)
+1. `cat` (reviewed)
     - [x] `BufRead` common functions: `read_line`, `lines`, etc.
     - [x] Integration testing using `assert_cmd` and `predicates`
-1. `head`
+1. `head` (reviewed)
 1. `wc`
 1. `uniq`
 1. `find`
@@ -26,7 +26,7 @@ With three chapters remaining (`fortune`, `cal`, and `ls`), I felt sufficiently 
     - [Optional argument](#optional-argument)
     - [Mutually exclusive arguments](#mutually-exclusive-arguments)
 - [Project organization](#project-organization)
-- [Iterating over lines](#iterating-over-lines-using-bufread)
+- [Iterating over buffered reader](#iterating-over-buffered-reader)
 
 ## Integration testing
 In this project, integration testing is used to validate the behavior of the various programs from the user's perspective. This means compiling the binaries, then write the tests to run those binaries as if we don't know what went into those binaries. This style of testing is a contrast against unit tests, which validate the behavior of the lowest-level building blocks of each program, such as indiviudal structs and functions.
@@ -227,11 +227,12 @@ pub fn open(path: &str) -> MyResult<Box<dyn BufRead>> {
 Note that for importing modules and components within the library modules, we need to import using `crate::xxx`; on the other hand, we need to use `packagename::xxx` to import components into the binary ([reference](https://users.rust-lang.org/t/use-crate-x-vs-use-packagename-x/44122)).
 
 
-## Iterating over lines using `BufRead`
+## Iterating over buffered reader
 The `BufReader` struct and the `BufRead` trait are common recurrences in the programs of this project for interacting with `STDIN` and files.
 
 First, note that many functions are not available in `BufReader` alone; instead, the `BufRead` trait must be brought into scope before functions like `lines()` and `read_lines()` become available to the `BufReader` object.
 
+### Iterating over lines
 When implementing `cat`, I choose to implement a function that reads from the input (`stdin` or file) line by line so as to keep count of the appropriate line number depending on whether I am counting all lines or non-empty lines. My first implementation uses the `read_line` method from the `BufRead` trait, which required the input of a buffer:
 
 ```rust
@@ -313,4 +314,31 @@ where T: Read + Seek {}
 
 /// TODO: I am not sure if it makes sense to move the reader object
 fn cat<T>(mut reader: T) -> MyResult<()> {}
+```
+
+### Iterating over bytes
+When implementing `head`, there is an additional requirement that allows the user to capture the first `n` bytes of a file instead of the first a few lines.
+
+There are two functions from the `Read` trait that I explored, though notice that without the `Seek` trait, reading is destructive, meaning that once some content is read, the reader cannot be rewound back to a previous position.:
+
+* the `read` method takes a mutable reference to the reader and writes to the buffer (up to the length of the buffer)
+* the `bytes` method takes the reader itself and return an iterator over the bytes of the reader
+
+Both are valid choices, but I ultimately chose to go with `bytes` because in `head`, each reader will only be read once (which makes it okay to move the reader) and the iterators offer some neat functions that make "taking up to `n` bytes" much cleaner to implement:
+
+```rust
+fn read_bytes<T: BufRead>(reader: T, num: usize) -> MyResult<String> {
+    let bytes = reader
+        .bytes()
+        .take(num)
+        .filter_map(|byte_or_err| {
+            if let Ok(byte) = byte_or_err {
+                return Some(byte);
+            }
+            return None;
+        })
+        .collect::<Vec<u8>>();
+    let string = String::from_utf8_lossy(&bytes);
+    return Ok(string.to_string());
+}
 ```
