@@ -25,55 +25,75 @@ pub fn run() -> MyResult<i32> {
     if files.len() == 0 {
         files.push("".to_string());
     }
-
-    for (i, file) in files.iter().enumerate() {
-        let mut buf_reader = common::open(&file)?;
-        let mut buffer = String::new();
-        if let Some(bytes_count) = args.bytes_count {
-            read_bytes(&mut buf_reader, &mut buffer, bytes_count)?;
-        } else {
-            read_lines(&mut buf_reader, &mut buffer, args.line_count)?;
-        }
-
-        // For the second and later buffer, separate with a line break
-        if i > 0 {
-            println!();
-        }
-
-        // if there are more than one buffer, then print a header
-        if files.len() > 1 {
-            println!("==> {file} <==");
-        }
-
-        print!("{buffer}");
-    }
-
-    return Ok(0);
-}
-
-/// Given a buffered reader, append the specified number of lines to the input
-/// buffer. The read_line method is used so that the rest of the file will not
-/// be read. If the read is successful, return the total number of bytes
-/// written
-fn read_lines<T: BufRead>(buf_reader: &mut T, buffer: &mut String, num: usize) -> MyResult<usize> {
-    let mut bytes_written = 0;
-    for _ in 0..num {
-        if let Ok(bytes_read) = buf_reader.read_line(buffer) {
-            if bytes_read == 0 {
-                // Reached EOF, terminating the read
-                return Ok(bytes_written);
+    let header = files.len() > 1;
+    
+    let mut exit_code = 0;
+    let heads = files.iter()
+        .filter_map(|path| {  // map path to reader
+            return match common::open(path) {
+                Ok(reader) => Some((path, reader)),
+                Err(e) => {
+                    eprintln!("head: {e}");
+                    exit_code = 1;
+                    return None;
+                }
+            };
+        })
+        .filter_map(|(path, reader)| {  // map reader to heads
+            let head = match args.bytes_count {
+                Some(num) => read_bytes(reader, num),
+                None => read_lines(reader, args.line_count),
+            };
+            if let Ok(head) = head {
+                return Some((path, head));
             }
-            bytes_written += bytes_read;
-        }
-    }
+            return None;
+        })
+        .map(|(path, head)| { // attach head if necessary
+            if header {
+                let mut header_str = format!("==> {path} <==\n");
+                header_str.push_str(&head);
+                return header_str;
+            }
+            return head;
+        })
+        .collect::<Vec<String>>()
+        .join("\n");
+    print!("{heads}");
 
-    return Ok(bytes_written);
+    return Ok(exit_code);
 }
 
-/// Given a buffere
-fn read_bytes<T: BufRead>(buf_reader: &mut T, buffer: &mut String, num: usize) -> MyResult<usize> {
-    let mut bytes: Vec<u8> = vec![0; num];
-    let bytes_written = buf_reader.read(&mut bytes)?;
-    buffer.push_str(&String::from_utf8_lossy(&bytes));
-    return Ok(bytes_written);
+/// Return (up to) the first a few lines of the given reader
+fn read_lines<T: BufRead>(reader: T, num: usize) -> MyResult<String> {
+    let mut lines = reader.lines()
+        .take(num)
+        .filter_map(|line_or_err| {
+            if let Ok(line) = line_or_err {
+                return Some(line);
+            }
+            return None;
+        })
+        .collect::<Vec<String>>()
+        .join("\n");
+    // each line is ended with a line break!
+    lines.push_str("\n");
+
+    return Ok(lines);
+}
+
+/// Return (up to) the first a few bytes from the given reader as a (possibly)
+/// lossy String
+fn read_bytes<T: BufRead>(reader: T, num: usize) -> MyResult<String> {
+    let bytes = reader.bytes()
+        .take(num)
+        .filter_map(|byte_or_err| {
+            if let Ok(byte) = byte_or_err {
+                return Some(byte);
+            }
+            return None;
+        })
+        .collect::<Vec<u8>>();
+    let string = String::from_utf8_lossy(&bytes);
+    return Ok(string.to_string());
 }
