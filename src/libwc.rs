@@ -1,24 +1,8 @@
 use crate::common::{self, MyResult};
 use clap::Parser;
-use std::error::Error;
-use std::fs::File;
-use std::io::{self, BufRead, BufReader};
+use std::io::BufRead;
 
 ///  word, line, character, and byte count
-///
-///  The wc utility displays the number of lines, words, and bytes contained
-///  in each input file, or standard input (if no file is specified) to the
-///  standard output.
-///
-///  A line is defined as a string of characters
-///  delimited by a ⟨newline⟩ character.  Characters beyond the final
-///  ⟨newline⟩ character will not be included in the line count.
-///
-///  A word is defined as a string of characters delimited by white space
-///  characters.  White space characters are the set of characters for which
-///  the iswspace(3) function returns true. If more than one input file is
-///  specified, a line of cumulative counts for all the files is displayed
-///  on a separate line after the output for the last file
 #[derive(Parser, Debug)]
 #[command(version, author)]
 struct Arg {
@@ -34,9 +18,7 @@ struct Arg {
     bytes: bool,
 
     /// The number of characters in each input file is written to the standard
-    /// output. If the current locale does not support multibyte characters,
-    /// then this is equivalent to the "-c" option. This will conflict with
-    /// the usage of the "-c" option
+    /// output.
     #[arg(short = 'm')]
     chars: bool,
 
@@ -70,26 +52,23 @@ impl WordCountInfo {
             path,
         };
     }
-    /// From a file path and a buffered reader, perform the counting and
-    /// return an instance of WordCountInfo.
-    fn from_read<T: BufRead>(path: &str, reader: &mut T) -> MyResult<Self> {
+
+    /// Count the lines, words, bytes, and chars of all content from the input
+    /// reader
+    fn from_reader<T: BufRead>(path: &str, reader: &mut T) -> MyResult<Self> {
         let mut line_cnt = 0;
         let mut word_cnt = 0;
         let mut byte_cnt = 0;
         let mut char_cnt = 0;
 
-        let mut buffer = String::new();
-        loop {
-            let buf_byte_cnt = reader.read_line(&mut buffer)?;
-            if buf_byte_cnt == 0 {
-                break;
+        reader.lines().for_each(|line_or_err| {
+            if let Ok(line) = line_or_err {
+                byte_cnt += line.as_bytes().len() + 1; // line break
+                line_cnt += 1;
+                char_cnt += line.chars().count() + 1;
+                word_cnt += line.split_whitespace().count();
             }
-            byte_cnt += buf_byte_cnt;
-            line_cnt += 1;
-            char_cnt += buffer.chars().count();
-            word_cnt += buffer.split_whitespace().count();
-            buffer.clear();
-        }
+        });
 
         return Ok(Self::new(line_cnt, word_cnt, byte_cnt, char_cnt, path));
     }
@@ -150,37 +129,55 @@ impl WordCountInfo {
 pub fn run() -> MyResult<i32> {
     let mut exitcode = 0;
     let mut args = Arg::try_parse()?;
-    let (count_lines, count_words, count_bytes, count_chars) =
-        match (args.lines, args.words, args.bytes, args.chars) {
-            (false, false, false, false) => (true, true, true, false),
-            _ => (args.lines, args.words, args.bytes, args.chars),
-        };
+
+    // If no flags are specified, then use the default set of flags:
+    // line, word, bytes.
+    if !(args.lines || args.words || args.bytes || args.chars) {
+        args.lines = true;
+        args.words = true;
+        args.bytes = true;
+    }
 
     if args.files.len() == 0 {
         args.files.push("".to_string());
     }
-    let mut word_counts = vec![];
-    let mut output_lines = vec![];
 
-    for file in args.files.iter() {
-        match common::open(&file) {
-            Ok(mut reader) => {
-                let wc = WordCountInfo::from_read(&file, &mut reader)?;
-                output_lines.push(wc.to_string(count_lines, count_words, count_bytes, count_chars));
-                let line = wc.to_string(count_lines, count_words, count_bytes, count_chars);
-                println!("{line}");
-                word_counts.push(wc);
-            }
+    let word_counts: Vec<WordCountInfo> = args
+        .files
+        .iter()
+        .map(|file| (file, common::open(file)))
+        .filter_map(|(file, reader_or_err)| match reader_or_err {
+            Ok(reader) => Some((file, reader)),
             Err(e) => {
-                eprintln!("wc: {}", e.to_string());
-                exitcode = 1;
+                eprintln!("wc: {e}");
+                exitcode = 1; // first mutable borrow
+                None
             }
-        }
-    }
+        })
+        .filter_map(|(file, mut reader)| {
+            match WordCountInfo::from_reader(&file, &mut reader) {
+                Ok(wc) => Some(wc),
+                Err(e) => {
+                    eprintln!("wc: {e}");
+                    // exitcode = 1;  // second mutable borrow
+                    None
+                }
+            }
+        })
+        .collect();
+    word_counts.iter().for_each(|wc| {
+        println!(
+            "{}",
+            wc.to_string(args.lines, args.words, args.bytes, args.chars)
+        )
+    });
+
     if args.files.len() > 1 {
         let total = WordCountInfo::from_word_counts(&word_counts);
-        let line = total.to_string(count_lines, count_words, count_bytes, count_chars);
-        println!("{line}");
+        println!(
+            "{}",
+            total.to_string(args.lines, args.words, args.bytes, args.chars)
+        );
     }
 
     return Ok(exitcode);
@@ -195,7 +192,7 @@ mod tests {
     fn create_word_cnt_info() {
         let test_str = "锟斤拷\n锘锘锘\n烫烫烫\n屯屯屯\n";
         let mut reader = Cursor::new(test_str);
-        let wcinfo = WordCountInfo::from_read("", &mut reader).unwrap();
+        let wcinfo = WordCountInfo::from_reader("", &mut reader).unwrap();
 
         assert_eq!(wcinfo.line_cnt, 4);
         assert_eq!(wcinfo.word_cnt, 4);
