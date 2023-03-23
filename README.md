@@ -20,6 +20,8 @@ With three chapters remaining (`fortune`, `cal`, and `ls`), I felt sufficiently 
 1. `tail`
 
 # Valuable lessons
+- [Unit testing](#unit-testing)
+    - [Cursor](#buffered-reader-on-in-memory-string)
 - [Integration testing](#integration-testing)
     - [Test functions](#test-functions)
     - [Running binaries with code](#running-binaries-with-code)
