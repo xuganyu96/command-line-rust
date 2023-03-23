@@ -10,6 +10,8 @@ With three chapters remaining (`fortune`, `cal`, and `ls`), I felt sufficiently 
     - [x] Integration testing using `assert_cmd` and `predicates`
 1. `head` (reviewed)
 1. `wc`
+    - [x] Use `Cursor` to write unit tests
+    - [ ] Lifetime annotation, quick example
 1. `uniq`
 1. `find`
 1. `cut`
@@ -18,6 +20,9 @@ With three chapters remaining (`fortune`, `cal`, and `ls`), I felt sufficiently 
 1. `tail`
 
 # Valuable lessons
+- [Integration testing](#integration-testing)
+    - [Test functions](#test-functions)
+    - [Running binaries with code](#running-binaries-with-code)
 - [Exit code pattern](#exit-code-patterns)
 - [CLI Argument parsing](#cli-argument-parsing-using-clap)
     - [Helpful information](#helpful-information)
@@ -27,14 +32,63 @@ With three chapters remaining (`fortune`, `cal`, and `ls`), I felt sufficiently 
     - [Mutually exclusive arguments](#mutually-exclusive-arguments)
 - [Project organization](#project-organization)
 - [Iterating over buffered reader](#iterating-over-buffered-reader)
+    - [Iterating over lines](#iterating-over-lines)
+    - [Iterating over bytes](#iterating-over-bytes)
+
+## Unit testing
+Unit testing stands in contrast with integration testing in that unit tests are written against subcomponents of the program instead of the program as a whole. With Rust, unit tests are written as a sub-module in the module where the target is implemented:
+
+```rust
+/// The module itself
+
+fn somefunc() {
+    // some implementation
+}
+
+#[cfg(test)]
+mod tests {
+    // Allows child module to use parent module components, even private methods
+    use super::*;
+
+    #[test]
+    fn some_test() {
+        // ...
+    }
+}
+```
+
+### Buffered reader on in-memory String
+One powerful tool for unit testing is the `std::io::Cursor` struct, which implements both the `BufRead` and `Seek` traits on in-memory Strings.
+
+In the implementation for `head`, the struct `WordCountInfo` is used to capture the number of lines/words/bytes from buffered readers. It makes sense to unit tests the method that takes a reader and return the word count object, but it does not make sense to create permanent test data files just for that, hence the `Cursor`:
+
+```rust
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::io::Cursor;
+
+    #[test]
+    fn create_word_cnt_info() {
+        let test_str = "锟斤拷\n锘锘锘\n烫烫烫\n屯屯屯\n";
+        let mut reader = Cursor::new(test_str);
+        let wcinfo = WordCountInfo::from_reader("", &mut reader).unwrap();
+
+        assert_eq!(wcinfo.line_cnt, 4);
+        assert_eq!(wcinfo.word_cnt, 4);
+        assert_eq!(wcinfo.byte_cnt, 40);
+        assert_eq!(wcinfo.char_cnt, 16);
+    }
+}
+```
 
 ## Integration testing
 In this project, integration testing is used to validate the behavior of the various programs from the user's perspective. This means compiling the binaries, then write the tests to run those binaries as if we don't know what went into those binaries. This style of testing is a contrast against unit tests, which validate the behavior of the lowest-level building blocks of each program, such as indiviudal structs and functions.
 
-## Test functions
+### Test functions
 Each test is a function that has the `#[test]` attribute. Tests can be written using macros like `assert!` and `assert_eq!` so that a test passes if and only if it does not panick. Tests can also be written to return a `Result<T, E>` where `Ok` means the test passes while `Err` means the test fails.
 
-## Running binaries with code
+### Running binaries with code
 Rust's `std::process` library contains a `Command` struct that can be used to make system calls and capture outputs. Here is an example
 
 ```rust
