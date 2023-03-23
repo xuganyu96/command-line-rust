@@ -32,18 +32,17 @@ struct Arg {
 
 /// A collection of counting information
 #[derive(Debug)]
-struct WordCountInfo {
+struct WordCountInfo<'a> {
     line_cnt: usize,
     word_cnt: usize,
     byte_cnt: usize,
     char_cnt: usize,
-    path: String,
+    path: &'a str,
 }
 
-impl WordCountInfo {
+impl<'a> WordCountInfo<'a> {
     /// Create a new instance using the input arguments
-    fn new(line_cnt: usize, word_cnt: usize, byte_cnt: usize, char_cnt: usize, path: &str) -> Self {
-        let path = path.to_string();
+    fn new(line_cnt: usize, word_cnt: usize, byte_cnt: usize, char_cnt: usize, path: &'a str) -> Self {
         return Self {
             line_cnt,
             word_cnt,
@@ -55,7 +54,7 @@ impl WordCountInfo {
 
     /// Count the lines, words, bytes, and chars of all content from the input
     /// reader
-    fn from_reader<T: BufRead>(path: &str, reader: &mut T) -> MyResult<Self> {
+    fn from_reader<T: BufRead>(path: &'a str, reader: &mut T) -> MyResult<Self> {
         let mut line_cnt = 0;
         let mut word_cnt = 0;
         let mut byte_cnt = 0;
