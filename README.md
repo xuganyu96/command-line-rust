@@ -11,7 +11,7 @@ With three chapters remaining (`fortune`, `cal`, and `ls`), I felt sufficiently 
 1. `head` (reviewed)
 1. `wc` (reviewed)
     - [x] Use `Cursor` to write unit tests
-    - [ ] Lifetime annotation, quick example
+    - [x] Lifetime annotation, quick example
 1. `uniq`
 1. `find`
 1. `cut`
