@@ -10,7 +10,7 @@ use std::{
 #[derive(Parser, Debug)]
 #[command(version, author)]
 struct Args {
-    /// precede each output line with the ocunt of the number of times the
+    /// precede each output line with the count of the number of times the
     /// line occurred in the input, followed by a single space
     #[arg(short = 'c', long = "count")]
     count: bool,
@@ -36,57 +36,51 @@ fn open_writer(path: &str) -> MyResult<Box<dyn Write>> {
     return Ok(writer);
 }
 
-/// Given a reader, stream the lines from the reader and write the uniq lines
-/// to the input writer. Return the number of bytes written.
-fn stream_unique_lines(
-    reader: &mut Box<dyn BufRead>,
-    writer: &mut Box<dyn Write>,
+/// Read through the lines of the reader and output unique lines to the writer
+fn stream_uniq<T, U>(
+    reader: &mut T,
+    writer: &mut U,
     count: bool,
-) -> MyResult<usize> {
+) -> MyResult<usize> 
+where T: BufRead,
+      U: Write {
     let mut bytes_written = 0;
-    let mut buffer = String::new();
-    let mut buffer_cnt = 1;
-    let mut line = String::new();
-    let mut first_line = true;
+    let mut prev_line = String::new();
+    let mut prev_line_cnt: usize = 0;
 
-    while let Ok(bytes_read) = reader.read_line(&mut line) {
-        // println!("buffer: '{buffer}', line: '{line}'");
-        if bytes_read == 0 {
-            break;
-        }
-        if line == buffer {
-            // println!("increment counter");
-            buffer_cnt += 1;
+    // NOTE: implementing the logic here using iterators might be possible but
+    // it will not be any cleaner than using for loops
+    for (i, new_line) in reader.lines().enumerate() {
+        let new_line = new_line?;
+        if i == 0 {
+            prev_line = new_line;
+            prev_line_cnt = 1;
+        } else if new_line == prev_line {
+            prev_line_cnt += 1;
         } else {
-            // println!("Flushing buffer at cnt={buffer_cnt}");
-            if !first_line {
-                bytes_written += flush(writer, &buffer, buffer_cnt, count)?;
-            }
-            buffer.clear();
-            buffer.push_str(&line);
-            buffer_cnt = 1;
+            bytes_written += flush(writer, &prev_line, prev_line_cnt, count)?;
+            prev_line = new_line;
+            prev_line_cnt = 1;
         }
-        line.clear();
-        first_line = false;
     }
     if bytes_written > 0 {
-        bytes_written += flush(writer, &buffer, buffer_cnt, count)?;
+        bytes_written += flush(writer, &prev_line, prev_line_cnt, count)?;
     }
 
     return Ok(bytes_written);
 }
 
 /// Flush the input buffer into the writer. Return the number of bytes written
-fn flush(
-    writer: &mut Box<dyn Write>,
+fn flush<T: Write>(
+    writer: &mut T,
     buffer: &str,
     buffer_cnt: usize,
     count: bool,
 ) -> MyResult<usize> {
     if count {
-        write!(writer, "{:>4} {}", buffer_cnt, buffer)?;
+        writeln!(writer, "{:>4} {}", buffer_cnt, buffer)?;
     } else {
-        write!(writer, "{buffer}")?;
+        writeln!(writer, "{buffer}")?;
     }
 
     return Ok(buffer.len());
@@ -100,7 +94,7 @@ pub fn run() -> MyResult<i32> {
     let fileout = &args.fileout.unwrap_or("".to_string());
     let mut reader = common::open(filein).map_err(|e| format!("{filein}: {e}"))?;
     let mut writer = open_writer(fileout).map_err(|e| format!("{fileout}: {e}"))?;
-    stream_unique_lines(&mut reader, &mut writer, args.count)?;
+    stream_uniq(&mut reader, &mut writer, args.count)?;
 
     return Ok(0);
 }
