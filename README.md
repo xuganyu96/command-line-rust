@@ -9,7 +9,7 @@ With three chapters remaining (`fortune`, `cal`, and `ls`), I felt sufficiently 
     - [x] `BufRead` common functions: `read_line`, `lines`, etc.
     - [x] Integration testing using `assert_cmd` and `predicates`
 1. `head` (reviewed)
-1. `wc`
+1. `wc` (reviewed)
     - [x] Use `Cursor` to write unit tests
     - [ ] Lifetime annotation, quick example
 1. `uniq`
@@ -20,6 +20,7 @@ With three chapters remaining (`fortune`, `cal`, and `ls`), I felt sufficiently 
 1. `tail`
 
 # Valuable lessons
+- [Learning to use lifetime annotation](#learning-to-use-lifetime-annotation)
 - [Unit testing](#unit-testing)
     - [Cursor](#buffered-reader-on-in-memory-string)
 - [Integration testing](#integration-testing)
@@ -36,6 +37,68 @@ With three chapters remaining (`fortune`, `cal`, and `ls`), I felt sufficiently 
 - [Iterating over buffered reader](#iterating-over-buffered-reader)
     - [Iterating over lines](#iterating-over-lines)
     - [Iterating over bytes](#iterating-over-bytes)
+
+## Learning to use lifetime annotation
+In my original implementation of `wc`, I followed the instruction from the book and used a struct to abstract the various counts of a file. For ease of stringifying the struct, the path of the file counted is a field of the struct, and for the initial implementation, a copy of the path is made at instantiation:
+
+```rust
+struct WordCount {
+    // ...
+    path: String,
+}
+
+impl WordCount {
+    fn new(..., path: &str) -> Self {
+        // pass in a reference and make a copy
+        let path = path.to_string();
+        return Self { ..., path };
+    }
+}
+```
+
+However, this copy is unnecessary. Since the paths are originally stored in `args.files` in a `Vec<String>` and never modified, it suffices to maintain a reference to the path:
+
+```rust
+struct WordCount {
+    /// ...
+    path: &str,
+}
+
+impl WordCount {
+    fn new(..., path: &str) -> Self {
+        retun Self { ..., path };
+    }
+}
+
+fn wc() -> MyResult<i32> {
+    // ... get args ...
+    let wordcount = WordCount::new(..., &args.files[i]);
+    // ...
+```
+
+Note that the code above will not compile, because from the compiler's point of view, there is no telling when the reference to `args.files` will go out of scope. This is where the lifetime annotation comes in:
+
+```rust
+// TODO: but what does it actually mean?
+struct WordCount<'a> {
+    // ...
+    path: &'a str,
+}
+```
+
+In a similar fashion, when implementing methods for `WordCount`, it is necessary to specify how long each reference must live using lifetime annotation
+
+```rust
+impl<'a> WordCount<'a> {
+    fn new(path: &'a str) -> Self {
+        return Self { path };
+    }
+}
+```
+
+`impl<'a>` declares `'a` to be a lifetime annotation so that it can be used in subsequence use cases. `WordCount<'a>` states something like "For a `WordCount` object with lifetime `'a`". Finally, `path: &'a str` specifies that the input string reference must live for as long as the output `WordCount` object is still alive
+
+TODO: the accuracy of this section remains to be improved
 
 ## Unit testing
 Unit testing stands in contrast with integration testing in that unit tests are written against subcomponents of the program instead of the program as a whole. With Rust, unit tests are written as a sub-module in the module where the target is implemented:
