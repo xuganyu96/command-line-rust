@@ -13,6 +13,7 @@ With three chapters remaining (`fortune`, `cal`, and `ls`), I felt sufficiently 
     - [x] Use `Cursor` to write unit tests
     - [x] Lifetime annotation, quick example
 1. `uniq`
+    - [x] Use `Write` trait to abstract the difference between STDIN and file
 1. `find`
 1. `cut`
 1. `grep`
@@ -20,6 +21,7 @@ With three chapters remaining (`fortune`, `cal`, and `ls`), I felt sufficiently 
 1. `tail`
 
 # Valuable lessons
+- [The Write trait](#the-write-trait)
 - [Learning to use lifetime annotation](#learning-to-use-lifetime-annotation)
 - [Unit testing](#unit-testing)
     - [Cursor](#buffered-reader-on-in-memory-string)
@@ -37,6 +39,48 @@ With three chapters remaining (`fortune`, `cal`, and `ls`), I felt sufficiently 
 - [Iterating over buffered reader](#iterating-over-buffered-reader)
     - [Iterating over lines](#iterating-over-lines)
     - [Iterating over bytes](#iterating-over-bytes)
+
+## The "Write" trait
+The program `uniq` is an odd ball among all eleven programs in this project in that it natively supports writing to file in addition to writing to STDOUT (versus every other program which exclusively writes to STDOUT, but can externally have their output directed onto a file via UNIX's `>` and `>>` operator).
+
+As a result, the `print!` and `println!` macros that are used in other programs are insufficient for `uniq`, and a clean abstraction requires something that is common between outputting to STDOUT and files. This is where `Write` trait is used to create an abstraction that covers both cases.
+
+```rust
+/// Write the buffer into the writer
+fn flush<T: Write>(
+    writer: &mut T,
+    buffer: &str,
+    buffer_cnt: usize,
+    count: bool,
+) -> MyResult<usize> {
+    if count {
+        writeln!(writer, "{:>4} {}", buffer_cnt, buffer)?;
+    } else {
+        writeln!(writer, "{buffer}")?;
+    }
+
+    return Ok(buffer.len());
+}
+```
+
+This mutable reference to "something that implements the `Write`" trait can be either `std::io::stdout` or `std::fs::File`:
+
+```rust
+/// Attempt to return a writer on the file path passed in, unless the empty
+/// string is passed in, then return a writer on stdout
+fn open_writer(path: &str) -> MyResult<Box<dyn Write>> {
+    let writer: Box<dyn Write> = match path {
+        "" => Box::new(io::stdout()),
+        _ => {
+            let file = File::create(path)?;
+            Box::new(file)
+        }
+    };
+
+    return Ok(writer);
+}
+```
+
 
 ## Learning to use lifetime annotation
 In my original implementation of `wc`, I followed the instruction from the book and used a struct to abstract the various counts of a file. For ease of stringifying the struct, the path of the file counted is a field of the struct, and for the initial implementation, a copy of the path is made at instantiation:
