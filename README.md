@@ -15,6 +15,7 @@ With three chapters remaining (`fortune`, `cal`, and `ls`), I felt sufficiently 
 1. `uniq`
     - [x] Use `Write` trait to abstract the difference between STDIN and file
 1. `find`
+    - [ ] Use `WalkDir` to recursively walk through the entries of a directory
 1. `cut`
 1. `grep`
 1. `comm`
@@ -35,6 +36,7 @@ With three chapters remaining (`fortune`, `cal`, and `ls`), I felt sufficiently 
     - [Parsing non-string type](#parsing-non-string-type)
     - [Optional argument](#optional-argument)
     - [Mutually exclusive arguments](#mutually-exclusive-arguments)
+    - [Enumerate value]
 - [Project organization](#project-organization)
 - [Iterating over buffered reader](#iterating-over-buffered-reader)
     - [Iterating over lines](#iterating-over-lines)
@@ -356,6 +358,36 @@ For anything other than the simplest default value, I personally recommend using
 
 ### Mutually exclusive arguments
 Some keyword arguments are mutually exclusive (e.g. see the `bytes` and `chars` flags in [wc](./src/libwc.rs)). Mutual exclusivity is specified using `#[arg(conflicts_with("variable_name")]`
+
+### Enumerate value
+The `find` program's argument `--type` requires the input to be one of fixed set of possible values (`f`, `d`, `l` for regular files, directories, and symlinks respectively). While it is possible to read the argument as `String` and check the values post-parsing, but it is also possible to parse directly into a Rust Enum using the `#[arg(value_enum)]` attribute on the argument:
+
+```rust
+use clap::{ Parser, ValueEnum };
+
+#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum)]
+enum EntryType {
+    /// regular files
+    File,
+    /// symbolic links
+    Link,
+    /// directory
+    Dir,
+}
+
+#[derive(Debug, Parser)]
+struct Args {
+    /// True if the file is of the specified type. Possible file types are
+    /// f (regular file), l (symlink), d (directory)
+    #[arg(long = "type")]
+    #[arg(value_enum)]
+    types: Vec<EntryType>,
+
+    //...
+}
+```
+
+However, if `derive(ValueEnum)` is used on the Enum, then possible strings in the command-line input will be automatically chosen. With the example above, the only acceptable values will be `--type file`, `--type link`, and `--type dir` (while the actual `find` program's `--type` flag takes `f`, `l`, `d` as possible values, but correspondingly the Enum variants will be less readable).
 
 ## Project organization
 For all but the most straightforward programs, it makes sense that the source code is divided between the binary and the library, where the binary simply invokes the functions in the library module, including the main routine that is conventionally named `run`.
