@@ -37,13 +37,11 @@ fn open_writer(path: &str) -> MyResult<Box<dyn Write>> {
 }
 
 /// Read through the lines of the reader and output unique lines to the writer
-fn stream_uniq<T, U>(
-    reader: &mut T,
-    writer: &mut U,
-    count: bool,
-) -> MyResult<usize> 
-where T: BufRead,
-      U: Write {
+fn stream_uniq<T, U>(reader: &mut T, writer: &mut U, count: bool) -> MyResult<usize>
+where
+    T: BufRead,
+    U: Write,
+{
     let mut bytes_written = 0;
     let mut prev_line = String::new();
     let mut prev_line_cnt: usize = 0;

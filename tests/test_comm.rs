@@ -1,5 +1,5 @@
 //! Integration tests for the comm program
-//! 
+//!
 //! Some notes on how comm prints the lines:
 //! At the beginning of the program, there are two pointers each starting at
 //! first line of the each input. At each iteration, a line is produced from
@@ -7,8 +7,8 @@
 //! then print to the third column. If the two lines are not equal, then the
 //! line that is lexicographically lesser is printed to the appropriate
 //! column, and the appropriate file will advance by one line.
-use std::error::Error;
 use assert_cmd::Command;
+use std::error::Error;
 
 type TestResult = Result<(), Box<dyn Error>>;
 
@@ -23,12 +23,14 @@ fn test_faang_empty() -> TestResult {
         .args(&[FAANG, EMPTY])
         .assert()
         .try_success()?
-        .try_stdout("Amazon
+        .try_stdout(
+            "Amazon
 Apple
 Facebook
 Google
 Netflix
-")?
+",
+        )?
         .try_stderr("")?;
 
     return Ok(());
@@ -40,12 +42,14 @@ fn test_empty_faang() -> TestResult {
         .args(&[EMPTY, FAANG])
         .assert()
         .try_success()?
-        .try_stdout("	Amazon
+        .try_stdout(
+            "	Amazon
 	Apple
 	Facebook
 	Google
 	Netflix
-")?
+",
+        )?
         .try_stderr("")?;
     return Ok(());
 }
@@ -56,15 +60,17 @@ fn test_faang_manga() -> TestResult {
         .args(&[FAANG, MANGA])
         .assert()
         .try_success()?
-        .try_stdout("		Amazon
+        .try_stdout(
+            "		Amazon
 		Apple
 Facebook
 		Google
 	Meta
 		Netflix
-")?
+",
+        )?
         .try_stderr("")?;
-    
+
     return Ok(());
 }
 
@@ -96,11 +102,13 @@ fn test_faang_manga_3() -> TestResult {
         .args(&["-12", FAANG, MANGA])
         .assert()
         .try_success()?
-        .try_stdout("Amazon
+        .try_stdout(
+            "Amazon
 Apple
 Google
 Netflix
-")?
+",
+        )?
         .try_stderr("")?;
     return Ok(());
 }

@@ -1,6 +1,6 @@
 use assert_cmd::Command;
-use std::error::Error;
 use predicates::str;
+use std::error::Error;
 
 type TestResult = Result<(), Box<dyn Error>>;
 
@@ -20,7 +20,7 @@ fn count_stdin() -> TestResult {
         .write_stdin("Hello, world!\n")
         .assert()
         .try_success()?
-        .try_stdout(        "       1      14 \n")?
+        .try_stdout("       1      14 \n")?
         .try_stderr("")?;
 
     Command::cargo_bin("wc")?
@@ -41,9 +41,11 @@ fn count_multiple_files() -> TestResult {
         .args(&["tests/wc/haiku.txt", "tests/wc/haiku.txt"])
         .assert()
         .try_success()?
-        .try_stdout("       3      11      48 tests/wc/haiku.txt
+        .try_stdout(
+            "       3      11      48 tests/wc/haiku.txt
        3      11      48 tests/wc/haiku.txt
-       6      22      96 total\n")?
+       6      22      96 total\n",
+        )?
         .try_stderr("")?;
 
     return Ok(());

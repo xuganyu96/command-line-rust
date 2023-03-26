@@ -1,9 +1,9 @@
 //! Test head:
 use assert_cmd::Command;
+use predicates::str;
 use std::error::Error;
 use std::fs::File;
-use std::io::{ BufRead, BufReader };
-use predicates::str;
+use std::io::{BufRead, BufReader};
 
 type TestResult = Result<(), Box<dyn Error>>;
 
@@ -49,8 +49,7 @@ fn head_stdin() -> TestResult {
 #[test]
 fn multiple_files() -> TestResult {
     Command::cargo_bin("head")?
-        .args(
-        &[
+        .args(&[
             "-n",
             "1",
             "tests/head/manylines.txt",
@@ -58,12 +57,14 @@ fn multiple_files() -> TestResult {
         ])
         .assert()
         .success()
-        .stdout("==> tests/head/manylines.txt <==
+        .stdout(
+            "==> tests/head/manylines.txt <==
 0000
 
 ==> tests/head/manylines.txt <==
 0000
-")
+",
+        )
         .stderr("");
     return Ok(());
 }

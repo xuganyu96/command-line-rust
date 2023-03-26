@@ -1,6 +1,6 @@
 //! Integration tests for "cut"
-use std::error::Error;
 use assert_cmd::Command;
+use std::error::Error;
 
 type TestResult = Result<(), Box<dyn Error>>;
 
@@ -10,11 +10,13 @@ fn cut_bytes() -> TestResult {
         .args(&["-b", "1-2", "tests/cut/books.csv"])
         .assert()
         .success()
-        .stdout("Au
+        .stdout(
+            "Au
 É
 Sa
 Ju
-");
+",
+        );
 
     return Ok(());
 }
@@ -25,11 +27,13 @@ fn cut_chars() -> TestResult {
         .args(&["-c", "1,2,3-10", "tests/cut/books.csv"])
         .assert()
         .success()
-        .stdout("Author,Yea
+        .stdout(
+            "Author,Yea
 Émile Zola
 Samuel Bec
 Jules Vern
-");
+",
+        );
 
     return Ok(());
 }
@@ -40,11 +44,13 @@ fn cut_csv() -> TestResult {
         .args(&["-f", "2", "-d", ",", "tests/cut/books.csv"])
         .assert()
         .success()
-        .stdout("Year
+        .stdout(
+            "Year
 1865
 1952
 1870
-");
+",
+        );
     return Ok(());
 }
 
@@ -54,11 +60,13 @@ fn cut_outside_range() -> TestResult {
         .args(&["-c", "77-99", "tests/cut/books.csv"])
         .assert()
         .success()
-        .stdout("
+        .stdout(
+            "
 
 
 
-");
+",
+        );
 
     return Ok(());
 }

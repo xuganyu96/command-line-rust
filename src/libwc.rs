@@ -42,7 +42,13 @@ struct WordCountInfo<'a> {
 
 impl<'a> WordCountInfo<'a> {
     /// Create a new instance using the input arguments
-    fn new(line_cnt: usize, word_cnt: usize, byte_cnt: usize, char_cnt: usize, path: &'a str) -> Self {
+    fn new(
+        line_cnt: usize,
+        word_cnt: usize,
+        byte_cnt: usize,
+        char_cnt: usize,
+        path: &'a str,
+    ) -> Self {
         return Self {
             line_cnt,
             word_cnt,

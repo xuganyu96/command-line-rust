@@ -1,6 +1,6 @@
 use assert_cmd::Command;
-use std::error::Error;
 use predicates::str;
+use std::error::Error;
 
 type TestResult = Result<(), Box<dyn Error>>;
 
@@ -37,14 +37,16 @@ fn cat_counting_nonblank_lines() -> TestResult {
         .write_stdin("\n")
         .assert()
         .try_success()?
-        .try_stdout("     1	It's not DNS
+        .try_stdout(
+            "     1	It's not DNS
      2	There's no way it's DNS
      3	It was DNS
 
      1	It's not DNS
      2	There's no way it's DNS
      3	It was DNS
-")?
+",
+        )?
         .try_stderr("")?;
     return Ok(());
 }
@@ -57,14 +59,16 @@ fn cat_counting_all_lines() -> TestResult {
         .write_stdin("\n")
         .assert()
         .try_success()?
-        .try_stdout("     1	It's not DNS
+        .try_stdout(
+            "     1	It's not DNS
      2	There's no way it's DNS
      3	It was DNS
      1	
      1	It's not DNS
      2	There's no way it's DNS
      3	It was DNS
-")?
+",
+        )?
         .try_stderr("")?;
     return Ok(());
 }

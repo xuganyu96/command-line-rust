@@ -1,11 +1,11 @@
 //! integration tests of my implementation of "uniq"
+use assert_cmd::Command;
 use std::{
+    error::Error,
     fs::File,
-    io::{ BufReader, BufRead },
-    error::Error
+    io::{BufRead, BufReader},
 };
 use tempfile::NamedTempFile;
-use assert_cmd::Command;
 
 type TestResult = Result<(), Box<dyn Error>>;
 
@@ -25,9 +25,7 @@ fn test_bin(
     output_path: Option<&str>,
     output_str: Option<&'static str>,
 ) -> TestResult {
-    let mut assertion = bin.args(args)
-        .write_stdin(stdin)
-        .assert();
+    let mut assertion = bin.args(args).write_stdin(stdin).assert();
     if success {
         assertion = assertion.try_success()?;
     } else {
@@ -43,7 +41,9 @@ fn test_bin(
         let mut reader = BufReader::new(File::open(output_path)?);
         let mut output = String::new();
         while let Ok(bytes) = reader.read_line(&mut output) {
-            if bytes == 0 { break; }
+            if bytes == 0 {
+                break;
+            }
         }
         assert_eq!(output, output_str);
     }
@@ -74,12 +74,15 @@ fn cities_stdin_fileout() -> TestResult {
 fn cities_stdin_stdout() -> TestResult {
     let cmd = Command::cargo_bin("uniq")?;
 
-    return test_bin(cmd,
+    return test_bin(
+        cmd,
         &[],
         "Madrid\nMadrid\nLisbon\n",
         true,
-        "Madrid\nLisbon\n", "",
-        None, None
+        "Madrid\nLisbon\n",
+        "",
+        None,
+        None,
     );
 }
 
@@ -93,7 +96,8 @@ fn empty_filein_fileout() -> TestResult {
         &["tests/uniq/empty.txt", outfile.path().to_str().unwrap()],
         "",
         true,
-        "", "",
+        "",
+        "",
         Some(outfile.path().to_str().unwrap()),
         Some(""),
     );
@@ -106,8 +110,10 @@ fn count_empty_filein_stdout() -> TestResult {
         &["-c", "tests/uniq/empty.txt"],
         "",
         true,
-        "", "",
-        None, None,
+        "",
+        "",
+        None,
+        None,
     );
 }
 
@@ -118,8 +124,10 @@ fn empty_filein_stdout() -> TestResult {
         &["tests/uniq/empty.txt"],
         "",
         true,
-        "", "",
-        None, None,
+        "",
+        "",
+        None,
+        None,
     );
 }
 
@@ -132,7 +140,8 @@ fn test_skip() -> TestResult {
         &["tests/uniq/skip.txt", outfile.path().to_str().unwrap()],
         "",
         true,
-        "", "",
+        "",
+        "",
         Some(outfile.path().to_str().unwrap()),
         Some("a\n\na\nb\n"),
     )?;
@@ -150,8 +159,10 @@ fn count_skip() -> TestResult {
         "   1 a
    1 
    1 a
-   1 b\n", "",
-        None, None,
+   1 b\n",
+        "",
+        None,
+        None,
     );
 }
 
@@ -163,9 +174,11 @@ fn fullset() -> TestResult {
         &["tests/uniq/full.txt", outfile.path().to_str().unwrap()],
         "",
         true,
-        "", "",
+        "",
+        "",
         Some(outfile.path().to_str().unwrap()),
-        Some("a
+        Some(
+            "a
 
 a
 b
@@ -186,7 +199,8 @@ a
 c
 a
 d
-"),
+",
+        ),
     );
 }
 
@@ -195,12 +209,18 @@ fn count_fullset() -> TestResult {
     let outfile = NamedTempFile::new()?;
     return test_bin(
         Command::cargo_bin("uniq")?,
-        &["-c", "tests/uniq/full.txt", outfile.path().to_str().unwrap()],
+        &[
+            "-c",
+            "tests/uniq/full.txt",
+            outfile.path().to_str().unwrap(),
+        ],
         "",
         true,
-        "", "",
+        "",
+        "",
         Some(outfile.path().to_str().unwrap()),
-        Some("   2 a
+        Some(
+            "   2 a
    1 
    1 a
    1 b
@@ -221,7 +241,7 @@ fn count_fullset() -> TestResult {
    3 c
    1 a
    4 d
-"),
+",
+        ),
     );
 }
-
