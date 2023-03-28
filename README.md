@@ -12,16 +12,18 @@ With three chapters remaining (`fortune`, `cal`, and `ls`), I felt sufficiently 
 1. `wc` (reviewed)
     - [x] Use `Cursor` to write unit tests
     - [x] Lifetime annotation, quick example
-1. `uniq`
+1. `uniq` (reviewed)
     - [x] Use `Write` trait to abstract the difference between STDIN and file
-1. `find`
-    - [ ] Use `WalkDir` to recursively walk through the entries of a directory
+1. `find` (reviewed)
+    - [x] Use `WalkDir` to recursively walk through the entries of a directory
 1. `cut`
 1. `grep`
 1. `comm`
 1. `tail`
 
 # Valuable lessons
+- [Functional style with iterator](#functional-style-with-iterator)
+    - [IntoIterator](#intoiterator)
 - [The Write trait](#the-write-trait)
 - [Learning to use lifetime annotation](#learning-to-use-lifetime-annotation)
 - [Unit testing](#unit-testing)
@@ -36,11 +38,60 @@ With three chapters remaining (`fortune`, `cal`, and `ls`), I felt sufficiently 
     - [Parsing non-string type](#parsing-non-string-type)
     - [Optional argument](#optional-argument)
     - [Mutually exclusive arguments](#mutually-exclusive-arguments)
-    - [Enumerate value]
+    - [Enumerate value](#enumerate-value)
 - [Project organization](#project-organization)
 - [Iterating over buffered reader](#iterating-over-buffered-reader)
     - [Iterating over lines](#iterating-over-lines)
     - [Iterating over bytes](#iterating-over-bytes)
+
+## Functional style with Iterator
+`Iterator<Item = ...>` is a trait that provides many lazily evaluated functions that enable elegant functional style code in Rust.
+
+One recurring pattern in the various programs is processing the numerous input files (think `cat`, `head`, `cut`, etc.):
+
+```rust
+struct Args {
+    // ... other arguments ...
+
+    files: Vec<String>
+}
+
+fn main() -> MyResult<i32> {
+    let args = Args::try_parse()?;
+    
+    args.files.iter()  // Iterating over references to the files
+        .map(|path| common::open(path))
+        .filter_map(|reader_or_err| {
+            if let Ok(reader) = reader_or_err {
+                return Some(reader);
+            }
+            return None;
+        })
+        .for_each(|reader| {
+            // ... apply the program's fore logic to the file reader ...
+        });
+}
+```
+
+`map`, `filter_map`, `for_each` are some of the most commonly used methods. `collect` will consume the iterator and return a complete collection. If the variable is not explicitly typed, a turbo fish notation can be used to specify the type:
+
+```rust
+args.files.iter()
+    .map(|path| common::open(path))
+    .filter_map(|reader_or_err| {
+        if let Ok(reader) = reader_or_err {
+            return Some(reader);
+        }
+        return None;
+    })
+    .map(|reader| reader.read_to_string().len())
+    .collect::<Vec<usize>>();
+```
+
+### IntoIterator
+In some special situation, such as with using `WalkDir` in the `find` program, there is no way to do a reference-only `.iter()` implementation. Instead, data has to be moved from the collection to the iterator, which is where the `IntoIterator` trait is used in place of `Iterator`, and `into_iter` is called to obtain the iterator.
+
+The only difference is that with `Iterator`, we are iterating over references to the item, while with `IntoIterator`, we are iterating over items themselves.
 
 ## The "Write" trait
 The program `uniq` is an odd ball among all eleven programs in this project in that it natively supports writing to file in addition to writing to STDOUT (versus every other program which exclusively writes to STDOUT, but can externally have their output directed onto a file via UNIX's `>` and `>>` operator).
